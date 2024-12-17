@@ -17,6 +17,7 @@ limitations under the License.
 package v1beta2
 
 import (
+	"fmt"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -55,6 +56,8 @@ type FoundationDBRestoreSpec struct {
 
 	// This is the configuration of the target blobstore for this backup.
 	BlobStoreConfiguration *BlobStoreConfiguration `json:"blobStoreConfiguration,omitempty"`
+	// This is the configuration of the target filesystem for this backup.
+	FSConfiguration *FSConfiguration `json:"fsConfiguration,omitempty"`
 
 	// CustomParameters defines additional parameters to pass to the backup
 	// agents.
@@ -85,16 +88,32 @@ type FoundationDBKeyRange struct {
 // BackupName gets the name of the backup for the source backup.
 // This will fill in a default value if the backup name in the spec is empty.
 func (restore *FoundationDBRestore) BackupName() string {
-	if restore.Spec.BlobStoreConfiguration == nil || restore.Spec.BlobStoreConfiguration.BackupName == "" {
+	if (restore.Spec.BlobStoreConfiguration == nil || restore.Spec.BlobStoreConfiguration.BackupName == "") && (restore.Spec.FSConfiguration == nil || restore.Spec.FSConfiguration.BackupName == "") {
 		return restore.ObjectMeta.Name
 	}
 
-	return restore.Spec.BlobStoreConfiguration.BackupName
+	if restore.Spec.BlobStoreConfiguration != nil && restore.Spec.BlobStoreConfiguration.BackupName != "" {
+		return restore.Spec.BlobStoreConfiguration.BackupName
+	}
+
+	if restore.Spec.FSConfiguration != nil && restore.Spec.FSConfiguration.BackupName != "" {
+		return restore.Spec.FSConfiguration.BackupName
+	}
+
+	return ""
 }
 
 // BackupURL gets the destination url of the backup.
 func (restore *FoundationDBRestore) BackupURL() string {
-	return restore.Spec.BlobStoreConfiguration.getURL(restore.BackupName(), restore.Spec.BlobStoreConfiguration.BucketName())
+	if restore.Spec.BlobStoreConfiguration != nil {
+		return restore.Spec.BlobStoreConfiguration.getURL(restore.BackupName(), restore.Spec.BlobStoreConfiguration.BucketName())
+	}
+
+	if restore.Spec.FSConfiguration != nil {
+		return fmt.Sprintf("%s/%s", restore.Spec.FSConfiguration.URL, restore.BackupName())
+	}
+
+	return ""
 }
 
 func init() {

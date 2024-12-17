@@ -116,6 +116,39 @@ var _ = Describe("[api] FoundationDBRestore", func() {
 					},
 				},
 				"blobstore://account@account:80/mybackup?bucket=fdb-backups&secure_connection=0"),
+			Entry("A restore with a fs config and a backup name",
+				FoundationDBRestore{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "mybackup",
+					},
+					Spec: FoundationDBRestoreSpec{
+						FSConfiguration: &FSConfiguration{
+							URL:        "/some/path",
+							BackupName: "backup",
+						},
+					},
+				},
+				"/some/path/backup"),
+			Entry("A restore with a fs config and no specific name",
+				FoundationDBRestore{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "mybackup",
+					},
+					Spec: FoundationDBRestoreSpec{
+						FSConfiguration: &FSConfiguration{
+							URL: "/some/path",
+						},
+					},
+				},
+				"/some/path/mybackup"),
+			Entry("A restore with just a metadata name will return an empty name",
+				FoundationDBRestore{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "mybackup",
+					},
+					Spec: FoundationDBRestoreSpec{},
+				},
+				""),
 		)
 	})
 })
