@@ -119,8 +119,31 @@ func selectCoordinatorsLocalities(logger logr.Logger, cluster *fdbv1beta2.Founda
 	})
 
 	logger.Info("Current coordinators", "coordinators", coordinators, "error", err)
-	if err != nil {
-		return nil, err
+	if len(coordinators) != coordinatorCount {
+		// Try one more time to get more coordinators
+		coordinatorsIDMap := make(map[string]bool, len(coordinators))
+		for _, coordinator := range coordinators {
+			coordinatorsIDMap[coordinator.ID] = true
+		}
+		filteredCandidates := make([]locality.Info, 0, len(candidates))
+		for _, candidate := range candidates {
+			if _, exists := coordinatorsIDMap[candidate.ID]; !exists {
+				filteredCandidates = append(filteredCandidates, candidate)
+			}
+		}
+		newcoordinators, err := locality.ChooseDistributedProcesses(cluster, filteredCandidates, coordinatorCount-len(coordinators), locality.ProcessSelectionConstraint{
+			HardLimits: locality.GetHardLimits(cluster),
+		})
+		// append the new coordinators to the existing coordinators
+		logger.Info("Current coordinators", "coordinators", coordinators, "additional coordinators", newcoordinators, "error", err)
+		if err != nil {
+			return nil, err
+		}
+		coordinators = append(coordinators, newcoordinators...)
+	} else {
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	coordinatorStatus := make(map[string]bool, len(status.Client.Coordinators.Coordinators))
