@@ -132,8 +132,34 @@ func (g generateInitialClusterFile) reconcile(ctx context.Context, r *Foundation
 	coordinators, err := locality.ChooseDistributedProcesses(cluster, processLocality, count, locality.ProcessSelectionConstraint{
 		HardLimits: locality.GetHardLimits(cluster),
 	})
-	if err != nil {
-		return &requeue{curError: err}
+	logger.Info("Current coordinators", "coordinators", coordinators, "error", err)
+	if len(coordinators) != count {
+		// Try one more time to get more coordinators
+		// Let's do a map with the ID of the coordinators
+		coordinatorsIDMap := make(map[string]bool, len(coordinators))
+		for _, coordinator := range coordinators {
+			coordinatorsIDMap[coordinator.ID] = true
+		}
+		// Filter out the coordinators already found from the candidates list
+		filteredCandidates := make([]locality.Info, 0, len(processLocality))
+		for _, candidate := range processLocality {
+			if _, exists := coordinatorsIDMap[candidate.ID]; !exists {
+				filteredCandidates = append(filteredCandidates, candidate)
+			}
+		}
+		newcoordinators, err := locality.ChooseDistributedProcesses(cluster, filteredCandidates, count-len(coordinators), locality.ProcessSelectionConstraint{
+			HardLimits: locality.GetHardLimits(cluster),
+		})
+		// append the new coordinators to the existing coordinators
+		logger.Info("Current coordinators", "coordinators", coordinators, "additional coordinators", newcoordinators, "error", err)
+		if err != nil {
+			return &requeue{curError: err}
+		}
+		coordinators = append(coordinators, newcoordinators...)
+	} else {
+		if err != nil {
+			return &requeue{curError: err}
+		}
 	}
 
 	for _, currentLocality := range coordinators {
