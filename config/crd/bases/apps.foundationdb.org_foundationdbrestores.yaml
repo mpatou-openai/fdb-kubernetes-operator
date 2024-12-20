@@ -56,6 +56,18 @@ spec:
                 required:
                 - accountName
                 type: object
+              fsConfiguration:
+                properties:
+                  backupName:
+                    maxLength: 1024
+                    type: string
+                  url:
+                    maxLength: 255
+                    minLength: 1
+                    type: string
+                required:
+                - url
+                type: object
               customParameters:
                 items:
                   maxLength: 100
@@ -127,6 +139,18 @@ spec:
                     type: array
                 required:
                 - accountName
+                type: object
+              fsConfiguration:
+                properties:
+                  backupName:
+                    maxLength: 1024
+                    type: string
+                  url:
+                    maxLength: 255
+                    minLength: 1
+                    type: string
+                required:
+                - url
                 type: object
               customParameters:
                 items:

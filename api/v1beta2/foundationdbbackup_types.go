@@ -95,6 +95,8 @@ type FoundationDBBackupSpec struct {
 
 	// This is the configuration of the target blobstore for this backup.
 	BlobStoreConfiguration *BlobStoreConfiguration `json:"blobStoreConfiguration,omitempty"`
+	// This is the configuration of the target filesystem for this backup.
+	FSConfiguration *FSConfiguration `json:"fsConfiguration,omitempty"`
 
 	// MainContainer defines customization for the foundationdb container.
 	MainContainer ContainerOverrides `json:"mainContainer,omitempty"`
@@ -211,6 +213,19 @@ type BlobStoreConfiguration struct {
 	URLParameters []URLParameter `json:"urlParameters,omitempty"`
 }
 
+// FSConfiguration describes the blob store configuration.
+type FSConfiguration struct {
+	// The name for the backup.
+	// If empty defaults to .metadata.name.
+	// +kubebuilder:validation:MaxLength=1024
+	BackupName string `json:"backupName,omitempty"`
+
+	// The url to use with the backup destination.
+	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Required
+	URL string `json:"url"`
+}
+
 // ShouldRun determines whether a backup should be running.
 func (backup *FoundationDBBackup) ShouldRun() bool {
 	return backup.Spec.BackupState == "" || backup.Spec.BackupState == BackupStateRunning || backup.Spec.BackupState == BackupStatePaused
@@ -224,7 +239,7 @@ func (backup *FoundationDBBackup) ShouldBePaused() bool {
 // Bucket gets the bucket this backup will use.
 // This will fill in a default value if the bucket in the spec is empty.
 func (backup *FoundationDBBackup) Bucket() string {
-	if backup.Spec.BlobStoreConfiguration.Bucket == "" {
+	if backup.Spec.BlobStoreConfiguration == nil || backup.Spec.BlobStoreConfiguration.Bucket == "" {
 		return "fdb-backups"
 	}
 
@@ -234,16 +249,27 @@ func (backup *FoundationDBBackup) Bucket() string {
 // BackupName gets the name of the backup in the destination.
 // This will fill in a default value if the backup name in the spec is empty.
 func (backup *FoundationDBBackup) BackupName() string {
-	if backup.Spec.BlobStoreConfiguration.BackupName == "" {
-		return backup.ObjectMeta.Name
+	if backup.Spec.BlobStoreConfiguration != nil && backup.Spec.BlobStoreConfiguration.BackupName != "" {
+		return backup.Spec.BlobStoreConfiguration.BackupName
 	}
 
-	return backup.Spec.BlobStoreConfiguration.BackupName
+	if backup.Spec.FSConfiguration != nil && backup.Spec.FSConfiguration.BackupName != "" {
+		return backup.Spec.FSConfiguration.BackupName
+	}
+
+	return backup.ObjectMeta.Name
 }
 
 // BackupURL gets the destination url of the backup.
 func (backup *FoundationDBBackup) BackupURL() string {
-	return backup.Spec.BlobStoreConfiguration.getURL(backup.BackupName(), backup.Bucket())
+	if backup.Spec.BlobStoreConfiguration != nil {
+		return backup.Spec.BlobStoreConfiguration.getURL(backup.BackupName(), backup.Bucket())
+	}
+	// mpatou: should we use file:// ?
+	if backup.Spec.FSConfiguration != nil {
+		return fmt.Sprintf("%s/%s", backup.Spec.FSConfiguration.URL, backup.BackupName())
+	}
+	return ""
 }
 
 // SnapshotPeriodSeconds gets the period between snapshots for a backup.

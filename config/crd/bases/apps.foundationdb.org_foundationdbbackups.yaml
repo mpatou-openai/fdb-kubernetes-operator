@@ -96,6 +96,18 @@ spec:
                 required:
                 - accountName
                 type: object
+              fsConfiguration:
+                properties:
+                  backupName:
+                    maxLength: 1024
+                    type: string
+                  url:
+                    maxLength: 255
+                    minLength: 1
+                    type: string
+                required:
+                - url
+                type: object
               bucket:
                 type: string
               clusterName:
@@ -3451,6 +3463,18 @@ spec:
                     type: array
                 required:
                 - accountName
+                type: object
+              fsConfiguration:
+                properties:
+                  backupName:
+                    maxLength: 1024
+                    type: string
+                  url:
+                    maxLength: 255
+                    minLength: 1
+                    type: string
+                required:
+                - url
                 type: object
               clusterName:
                 type: string

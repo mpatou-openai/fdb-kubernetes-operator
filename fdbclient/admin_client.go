@@ -556,6 +556,9 @@ func (client *cliAdminClient) GetProtocolVersion(version string) (string, error)
 }
 
 func (client *cliAdminClient) StartBackup(url string, snapshotPeriodSeconds int) error {
+	if url == "" {
+		return fmt.Errorf("URL is required to start a backup, check the configuration")
+	}
 	_, err := client.runCommand(cliCommand{
 		binary: fdbbackupStr,
 		args: []string{
@@ -646,6 +649,9 @@ func (client *cliAdminClient) GetBackupStatus() (*fdbv1beta2.FoundationDBLiveBac
 
 // StartRestore starts a new restore.
 func (client *cliAdminClient) StartRestore(url string, keyRanges []fdbv1beta2.FoundationDBKeyRange) error {
+	if url == "" {
+		return fmt.Errorf("URL is required to start a restore, check the configuration")
+	}
 	args := []string{
 		"start",
 		"-r",
