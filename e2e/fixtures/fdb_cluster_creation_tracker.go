@@ -21,14 +21,12 @@
 package fixtures
 
 import (
-	"context"
 	"log"
 	"strconv"
 	"time"
 
 	fdbv1beta2 "github.com/FoundationDB/fdb-kubernetes-operator/v2/api/v1beta2"
 	"github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -144,63 +142,7 @@ func (tracker *fdbClusterCreationTracker) checkStep(
 ) {
 	switch step {
 	case initialCreationStep:
-		// This is the initial creation step, that means the operator has to "create" the process groups and add them
-		// to the cluster status.
-		counts, err := cluster.GetProcessCountsWithDefaults()
-		gomega.Expect(err).ToNot(gomega.HaveOccurred())
-
-		if len(cluster.Status.ProcessGroups) < counts.Total() {
-			// Still waiting that all process groups are generated
-			return
-		}
-	case creationStepProcessGroupsCreated:
-		podList := &corev1.PodList{}
-		gomega.Expect(tracker.ctrlClient.List(context.TODO(), podList,
-			client.InNamespace(cluster.Namespace),
-			client.MatchingLabels(cluster.GetMatchLabels()))).ToNot(gomega.HaveOccurred())
-
-		if len(podList.Items) < len(cluster.Status.ProcessGroups) {
-			// We still have some Pods that need to be created
-			return
-		}
-	case creationStepPodsCreated:
-		podList := &corev1.PodList{}
-		gomega.Expect(tracker.ctrlClient.List(context.TODO(), podList,
-			client.InNamespace(cluster.Namespace),
-			client.MatchingLabels(cluster.GetMatchLabels()))).ToNot(gomega.HaveOccurred())
-
-		var runningPods int
-		for _, pod := range podList.Items {
-			if pod.Status.Phase != corev1.PodRunning {
-				continue
-			}
-
-			runningPods++
-		}
-
-		if runningPods < len(cluster.Status.ProcessGroups) {
-			// Some Pods are not in the running phase
-			return
-		}
-	case creationStepPodsRunning:
-		if cluster.Status.ConnectionString == "" {
-			// Wait until coordinators are chosen.
-			return
-		}
-	case creationStepCoordinatorSelected:
-		syncedProcessGroups := fdbv1beta2.FilterByConditions(
-			cluster.Status.ProcessGroups,
-			map[fdbv1beta2.ProcessGroupConditionType]bool{
-				fdbv1beta2.IncorrectConfigMap: false,
-				fdbv1beta2.MissingProcesses:   false,
-			},
-			true,
-		)
-
-		if len(syncedProcessGroups) < len(cluster.Status.ProcessGroups) {
-			// Some process groups are not yet synced
-			return
-		}
+		// Initial step, always move to the next step
 	case creationStepConfigMapSynced:
 		if !cluster.Status.Configured {
 			// Wait until the database was configured

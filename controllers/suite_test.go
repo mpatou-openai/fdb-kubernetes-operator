@@ -25,12 +25,9 @@ import (
 	"testing"
 	"time"
 
-	mockpodclient "github.com/FoundationDB/fdb-kubernetes-operator/v2/pkg/podclient/mock"
 	"github.com/go-logr/logr"
 
 	"github.com/FoundationDB/fdb-kubernetes-operator/v2/pkg/fdbadminclient/mock"
-
-	"github.com/FoundationDB/fdb-kubernetes-operator/v2/pkg/podmanager"
 
 	"github.com/FoundationDB/fdb-kubernetes-operator/v2/internal"
 
@@ -58,8 +55,6 @@ import (
 
 var k8sClient *mockclient.MockClient
 var clusterReconciler *FoundationDBClusterReconciler
-var backupReconciler *FoundationDBBackupReconciler
-var restoreReconciler *FoundationDBRestoreReconciler
 var requeueLimit = 20
 
 func TestAPIs(t *testing.T) {
@@ -86,20 +81,6 @@ var _ = BeforeEach(func() {
 		true /* enable indexing by nodeName */)
 
 	clusterReconciler = createTestClusterReconciler()
-	backupReconciler = &FoundationDBBackupReconciler{
-		Client:                 k8sClient,
-		Log:                    ctrl.Log.WithName("controllers").WithName("FoundationDBBackup"),
-		Recorder:               k8sClient,
-		InSimulation:           true,
-		DatabaseClientProvider: mock.DatabaseClientProvider{},
-	}
-
-	restoreReconciler = &FoundationDBRestoreReconciler{
-		Client:                 k8sClient,
-		Log:                    ctrl.Log.WithName("controllers").WithName("FoundationDBRestore"),
-		Recorder:               k8sClient,
-		DatabaseClientProvider: mock.DatabaseClientProvider{},
-	}
 })
 
 var _ = AfterSuite(func() {
@@ -117,34 +98,8 @@ var _ = AfterEach(func() {
 	}
 })
 
-func createDefaultRestore(cluster *fdbv1beta2.FoundationDBCluster) *fdbv1beta2.FoundationDBRestore {
-	return &fdbv1beta2.FoundationDBRestore{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cluster.Name,
-			Namespace: cluster.Namespace,
-		},
-		Spec: fdbv1beta2.FoundationDBRestoreSpec{
-			BlobStoreConfiguration: &fdbv1beta2.BlobStoreConfiguration{
-				AccountName: "test@test-service",
-				BackupName:  "test-backup",
-				Bucket:      "fdb-backups",
-			},
-			DestinationClusterName: cluster.Name,
-		},
-		Status: fdbv1beta2.FoundationDBRestoreStatus{},
-	}
-}
-
 func reconcileCluster(cluster *fdbv1beta2.FoundationDBCluster) (reconcile.Result, error) {
 	return reconcileObject(clusterReconciler, cluster.ObjectMeta, requeueLimit)
-}
-
-func reconcileBackup(backup *fdbv1beta2.FoundationDBBackup) (reconcile.Result, error) {
-	return reconcileObject(backupReconciler, backup.ObjectMeta, requeueLimit)
-}
-
-func reconcileRestore(restore *fdbv1beta2.FoundationDBRestore) (reconcile.Result, error) {
-	return reconcileObject(restoreReconciler, restore.ObjectMeta, requeueLimit)
 }
 
 func reconcileObject(
@@ -197,7 +152,7 @@ func setupClusterForTest(cluster *fdbv1beta2.FoundationDBCluster) error {
 		return err
 	}
 
-	return internal.NormalizeClusterSpec(cluster, internal.DeprecationOptions{})
+	return internal.NormalizeClusterSpec(cluster)
 }
 
 func createTestClusterReconciler() *FoundationDBClusterReconciler {
@@ -209,11 +164,5 @@ func createTestClusterReconciler() *FoundationDBClusterReconciler {
 			SimulateZones: true,
 			SimulateTime:  true,
 		},
-		PodLifecycleManager:          &podmanager.StandardPodLifecycleManager{},
-		PodClientProvider:            mockpodclient.NewMockFdbPodClient,
-		DatabaseClientProvider:       mock.DatabaseClientProvider{},
-		MaintenanceListStaleDuration: 4 * time.Hour,
-		MaintenanceListWaitDuration:  5 * time.Minute,
-		HighRunLoopBusyThreshold:     1.0,
 	}
 }

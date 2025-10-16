@@ -1,9 +1,8 @@
 /*
- * pod_client.go
  *
  * This source file is part of the FoundationDB open source project
  *
- * Copyright 2018-2021 Apple Inc. and the FoundationDB project authors
+ * Copyright 2021 Apple Inc. and the FoundationDB project authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,17 +17,18 @@
  * limitations under the License.
  */
 
-package podclient
+package internal
 
-// FdbPodClient provides methods for working with a FoundationDB pod
-type FdbPodClient interface {
-	// IsPresent checks whether a file is present.
-	IsPresent(path string) (bool, error)
+import (
+	fdbv1beta2 "github.com/FoundationDB/fdb-kubernetes-operator/v2/api/v1beta2"
+)
 
-	// UpdateFile checks if a file is up-to-date and tries to update it.
-	UpdateFile(name string, contents string) (bool, error)
-
-	// GetVariableSubstitutions gets the current keys and values that this
-	// process group will substitute into its monitor conf.
-	GetVariableSubstitutions() (map[string]string, error)
+// NormalizeClusterSpec converts a cluster spec into an unambiguous,
+// future-proof form, by applying any implicit defaults and moving configuration
+// from deprecated fields into fully-supported fields.
+func NormalizeClusterSpec(
+	cluster *fdbv1beta2.FoundationDBCluster,
+) error {
+	// FIXME: implement that
+	return nil
 }

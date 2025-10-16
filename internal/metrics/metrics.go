@@ -135,11 +135,6 @@ func CollectMetrics(ch chan<- prometheus.Metric, cluster *fdbv1beta2.FoundationD
 		descClusterReconciled,
 		boolFloat64(cluster.ObjectMeta.Generation == cluster.Status.Generations.Reconciled),
 	)
-	addGauge(descProcessGroupsToRemove, float64(len(cluster.Spec.ProcessGroupsToRemove)))
-	addGauge(
-		descProcessGroupsToRemoveWithoutExclusion,
-		float64(len(cluster.Spec.ProcessGroupsToRemoveWithoutExclusion)),
-	)
 
 	// Calculate the process group metrics
 	conditionMap, removals, exclusions := getProcessGroupMetrics(cluster)
@@ -169,30 +164,6 @@ func getProcessGroupMetrics(
 	metricMap := map[fdbv1beta2.ProcessClass]map[fdbv1beta2.ProcessGroupConditionType]int{}
 	removals := map[fdbv1beta2.ProcessClass]int{}
 	exclusions := map[fdbv1beta2.ProcessClass]int{}
-
-	for _, processGroup := range cluster.Status.ProcessGroups {
-		if _, exits := metricMap[processGroup.ProcessClass]; !exits {
-			metricMap[processGroup.ProcessClass] = map[fdbv1beta2.ProcessGroupConditionType]int{}
-			removals[processGroup.ProcessClass] = 0
-			exclusions[processGroup.ProcessClass] = 0
-		}
-
-		if processGroup.IsMarkedForRemoval() {
-			removals[processGroup.ProcessClass]++
-		}
-
-		if processGroup.IsExcluded() {
-			exclusions[processGroup.ProcessClass]++
-		}
-
-		if len(processGroup.ProcessGroupConditions) == 0 {
-			metricMap[processGroup.ProcessClass][fdbv1beta2.ReadyCondition]++
-		}
-
-		for _, condition := range processGroup.ProcessGroupConditions {
-			metricMap[processGroup.ProcessClass][condition.ProcessGroupConditionType]++
-		}
-	}
 
 	// Ensure that all conditions are present
 	for pClass := range metricMap {

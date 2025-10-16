@@ -290,38 +290,6 @@ func (client *realLockClient) GetDenyList() ([]string, error) {
 	return list.([]string), nil
 }
 
-// UpdateDenyList updates the deny list to match a list of entries.
-func (client *realLockClient) UpdateDenyList(locks []fdbv1beta2.LockDenyListEntry) error {
-	_, err := client.database.Transact(func(tr fdb.Transaction) (interface{}, error) {
-		err := tr.Options().SetAccessSystemKeys()
-		if err != nil {
-			return nil, err
-		}
-
-		keyRange, err := client.getDenyListKeyRange()
-		if err != nil {
-			return nil, err
-		}
-
-		values := tr.GetRange(keyRange, fdb.RangeOptions{}).GetSliceOrPanic()
-		denyListMap := make(map[string]bool, len(values))
-		for _, value := range values {
-			denyListMap[string(value.Value)] = true
-		}
-
-		for _, entry := range locks {
-			if entry.Allow && denyListMap[entry.ID] {
-				tr.Clear(client.getDenyListKey(entry.ID))
-			} else if !entry.Allow && !denyListMap[entry.ID] {
-				tr.Set(client.getDenyListKey(entry.ID), []byte(entry.ID))
-			}
-		}
-		return nil, nil
-	})
-
-	return err
-}
-
 // getDenyListKeyRange defines a key range containing the full deny list.
 func (client *realLockClient) getDenyListKeyRange() (fdb.KeyRange, error) {
 	return fdb.PrefixRange([]byte(fmt.Sprintf("%s/denyList/", client.cluster.GetLockPrefix())))

@@ -314,35 +314,7 @@ func (options *FactoryOptions) validateFlags() error {
 		options.cloudProvider = strings.ToLower(options.cloudProvider)
 	}
 
-	err := options.validateNodeSelector()
-	if err != nil {
-		return err
-	}
-
-	err = options.validateSynchronizationMode()
-	if err != nil {
-		return err
-	}
-
 	return options.validateFDBVersionTagMapping()
-}
-
-func (options *FactoryOptions) validateSynchronizationMode() error {
-	if options.synchronizationMode == "" {
-		options.synchronizationMode = string(fdbv1beta2.SynchronizationModeLocal)
-		return nil
-	}
-
-	options.synchronizationMode = strings.ToLower(options.synchronizationMode)
-	mode := fdbv1beta2.SynchronizationMode(options.synchronizationMode)
-	if mode == fdbv1beta2.SynchronizationModeGlobal || mode == fdbv1beta2.SynchronizationModeLocal {
-		return nil
-	}
-
-	return fmt.Errorf(
-		"synchronizationMode must be either \"local\" or \"global\", got :\"%s\"",
-		mode,
-	)
 }
 
 func validateVersion(label string, version string) error {
@@ -422,63 +394,4 @@ func getTagWithSuffix(tag string, isSidecar bool, debugSymbols bool) string {
 	}
 
 	return tag + tagSuffix
-}
-
-func (options *FactoryOptions) getImageVersionConfig(
-	baseImage string,
-	versionTag string,
-	isSidecar bool,
-	debugSymbols bool,
-) []fdbv1beta2.ImageConfig {
-	if options.fdbVersionTagMapping == "" {
-		var versionMapping fdbv1beta2.ImageConfig
-
-		if versionTag != "" {
-			versionMapping = fdbv1beta2.ImageConfig{
-				BaseImage: baseImage,
-				Version:   options.fdbVersion,
-				// TODO should this really be false? If yes we should add a comment
-				Tag: getTagWithSuffix(versionTag, false, debugSymbols),
-			}
-		} else {
-			versionMapping = fdbv1beta2.ImageConfig{
-				BaseImage: baseImage,
-				Version:   options.fdbVersion,
-				TagSuffix: getTagSuffix(isSidecar, debugSymbols),
-			}
-		}
-
-		return []fdbv1beta2.ImageConfig{
-			versionMapping,
-			{
-				BaseImage: baseImage,
-				TagSuffix: getTagSuffix(isSidecar, debugSymbols),
-			},
-		}
-	}
-
-	mappings := strings.Split(options.fdbVersionTagMapping, ",")
-	imageConfig := make([]fdbv1beta2.ImageConfig, len(mappings)+1)
-	for idx, mapping := range mappings {
-		versionMapping := strings.Split(mapping, ":")
-
-		imageConfig[idx] = fdbv1beta2.ImageConfig{
-			BaseImage: baseImage,
-			Version:   strings.TrimSpace(versionMapping[0]),
-			Tag: getTagWithSuffix(
-				strings.TrimSpace(versionMapping[1]),
-				isSidecar,
-				debugSymbols,
-			),
-		}
-	}
-
-	// Always add the base image config to make sure that the default images can be used, even if only a subset
-	// of versions use a version tag mapping.
-	imageConfig[len(mappings)] = fdbv1beta2.ImageConfig{
-		BaseImage: baseImage,
-		TagSuffix: getTagSuffix(isSidecar, debugSymbols),
-	}
-
-	return imageConfig
 }

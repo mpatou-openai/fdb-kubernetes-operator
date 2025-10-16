@@ -83,6 +83,11 @@ type DatabaseConfiguration struct {
 	// +kubebuilder:validation:Enum="";ssd;ssd-1;ssd-2;memory;memory-1;memory-2;ssd-redwood-1-experimental;ssd-redwood-1;ssd-rocksdb-experimental;ssd-rocksdb-v1;ssd-sharded-rocksdb;memory-radixtree-beta;custom;none
 	// +kubebuilder:default:none
 	PerpetualStorageWiggleEngine *StorageEngine `json:"perpetual_storage_wiggle_engine,omitempty"`
+
+	// ProcessCounts defines the number of processes to configure for each
+	// process class. You can generally omit this, to allow the operator to
+	// infer the process counts based on the database configuration.
+	ProcessCounts ProcessCounts `json:"processCounts,omitempty"`
 }
 
 // Region represents a region in the database configuration

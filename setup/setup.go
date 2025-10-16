@@ -29,85 +29,60 @@ import (
 	"os"
 	"path"
 	"strconv"
-	"strings"
 	"time"
-
-	"github.com/FoundationDB/fdb-kubernetes-operator/v2/pkg/podmanager"
-	"k8s.io/apimachinery/pkg/labels"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 
 	"github.com/go-logr/logr"
 
 	fdbv1beta2 "github.com/FoundationDB/fdb-kubernetes-operator/v2/api/v1beta2"
 	"github.com/FoundationDB/fdb-kubernetes-operator/v2/controllers"
 	"github.com/FoundationDB/fdb-kubernetes-operator/v2/fdbclient"
-	"github.com/FoundationDB/fdb-kubernetes-operator/v2/internal"
 	"gopkg.in/natefinch/lumberjack.v2"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 )
 
-var operatorVersion = "latest"
-
 // Options provides all configuration Options for the operator
 type Options struct {
-	EnableLeaderElection               bool
-	CleanUpOldLogFile                  bool
-	CompressOldFiles                   bool
-	PrintVersion                       bool
-	EnableRestartIncompatibleProcesses bool
-	ServerSideApply                    bool
-	EnableRecoveryState                bool
-	CacheDatabaseStatus                bool
-	EnableNodeIndex                    bool
-	ReplaceOnSecurityContextChange     bool
-	MetricsAddr                        string
-	LeaderElectionID                   string
-	LogFile                            string
-	LogFilePermission                  string
-	LabelSelector                      string
-	ClusterLabelKeyForNodeTrigger      string
-	HealthProbeBindAddress             string
-	WatchNamespace                     string
-	PodUpdateMethod                    string
-	CliTimeout                         int
-	MaxCliTimeout                      int
-	MaxConcurrentReconciles            int
-	LogFileMaxSize                     int
-	LogFileMaxAge                      int
-	MaxNumberOfOldLogFiles             int
-	MinimumRecoveryTimeForExclusion    float64
-	MinimumRecoveryTimeForInclusion    float64
-	HighRunLoopBusyThreshold           float64
-	LogFileMinAge                      time.Duration
-	GetTimeout                         time.Duration
-	PostTimeout                        time.Duration
-	MaintenanceListStaleDuration       time.Duration
-	MaintenanceListWaitDuration        time.Duration
+	CleanUpOldLogFile               bool
+	CompressOldFiles                bool
+	PrintVersion                    bool
+	ServerSideApply                 bool
+	EnableRecoveryState             bool
+	CacheDatabaseStatus             bool
+	EnableNodeIndex                 bool
+	ReplaceOnSecurityContextChange  bool
+	MetricsAddr                     string
+	LogFile                         string
+	LogFilePermission               string
+	ClusterLabelKeyForNodeTrigger   string
+	HealthProbeBindAddress          string
+	PodUpdateMethod                 string
+	CliTimeout                      int
+	MaxCliTimeout                   int
+	MaxConcurrentReconciles         int
+	LogFileMaxSize                  int
+	LogFileMaxAge                   int
+	MaxNumberOfOldLogFiles          int
+	MinimumRecoveryTimeForExclusion float64
+	MinimumRecoveryTimeForInclusion float64
+	HighRunLoopBusyThreshold        float64
+	LogFileMinAge                   time.Duration
+	GetTimeout                      time.Duration
+	PostTimeout                     time.Duration
+	MaintenanceListStaleDuration    time.Duration
+	MaintenanceListWaitDuration     time.Duration
 	// GlobalSynchronizationWaitDuration is the wait time for the operator when the synchronization mode is set to
 	// global. The wait time defines the period where no updates for the according action should happen. Increasing the
 	// wait time will increase the chances that all updates are part of the list but will also delay the rollout of
 	// the change.
 	GlobalSynchronizationWaitDuration time.Duration
-	// LeaseDuration is the duration that non-leader candidates will
-	// wait to force acquire leadership. This is measured against time of
-	// last observed ack. Default is 15 seconds.
-	LeaseDuration time.Duration
-	// RenewDeadline is the duration that the acting control plane will retry
-	// refreshing leadership before giving up. Default is 10 seconds.
-	RenewDeadline time.Duration
-	// RetryPeriod is the duration the LeaderElector clients should wait
-	// between tries of actions. Default is 2 seconds.
-	RetryPeriod                   time.Duration
-	DeprecationOptions            internal.DeprecationOptions
-	MinimumRequiredUptimeCCBounce time.Duration
+	MinimumRequiredUptimeCCBounce     time.Duration
 }
 
 // BindFlags will parse the given flagset for the operator option flags
@@ -117,24 +92,6 @@ func (o *Options) BindFlags(fs *flag.FlagSet) {
 		"metrics-addr",
 		":8080",
 		"The address the metric endpoint binds to.",
-	)
-	fs.BoolVar(
-		&o.EnableLeaderElection,
-		"enable-leader-election",
-		true,
-		"Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.",
-	)
-	fs.StringVar(
-		&o.LeaderElectionID,
-		"leader-election-id",
-		"fdb-kubernetes-operator",
-		"LeaderElectionID determines the name of the resource that leader election will use for holding the leader lock.",
-	)
-	fs.BoolVar(
-		&o.DeprecationOptions.UseFutureDefaults,
-		"use-future-defaults",
-		false,
-		"Apply defaults from the next major version of the operator. This is only intended for use in development.",
 	)
 	fs.StringVar(&o.LogFile, "log-file", "", "The path to a file to write logs to.")
 	fs.IntVar(&o.CliTimeout, "cli-timeout", 10, "The timeout to use for CLI commands in seconds.")
@@ -201,24 +158,6 @@ func (o *Options) BindFlags(fs *flag.FlagSet) {
 		"Defines whether the rotated log files should be compressed using gzip or not.",
 	)
 	fs.BoolVar(&o.PrintVersion, "version", false, "Prints the version of the operator and exits.")
-	fs.StringVar(
-		&o.LabelSelector,
-		"label-selector",
-		"",
-		"Defines a label-selector that will be used to select resources.",
-	)
-	fs.StringVar(
-		&o.WatchNamespace,
-		"watch-namespace",
-		os.Getenv("WATCH_NAMESPACE"),
-		"Defines which namespace the operator should watch.",
-	)
-	fs.StringVar(
-		&o.PodUpdateMethod,
-		"pod-update-method",
-		string(podmanager.Update),
-		"Defines how the Pod manager should update pods, possible values are \"update\" and \"patch\".",
-	)
 	fs.DurationVar(
 		&o.GetTimeout,
 		"get-timeout",
@@ -230,24 +169,6 @@ func (o *Options) BindFlags(fs *flag.FlagSet) {
 		"post-timeout",
 		10*time.Second,
 		"http timeout for post requests to the FDB sidecar.",
-	)
-	fs.DurationVar(
-		&o.LeaseDuration,
-		"leader-election-lease-duration",
-		15*time.Second,
-		"the duration that non-leader candidates will wait to force acquire leadership.",
-	)
-	fs.DurationVar(
-		&o.RenewDeadline,
-		"leader-election-renew-deadline",
-		10*time.Second,
-		"the duration that the acting controlplane will retry refreshing leadership before giving up.",
-	)
-	fs.DurationVar(
-		&o.RetryPeriod,
-		"leader-election-retry-period",
-		2*time.Second,
-		"the duration the LeaderElector clients should wait between tries of action.",
 	)
 	fs.DurationVar(
 		&o.MaintenanceListStaleDuration,
@@ -272,12 +193,6 @@ func (o *Options) BindFlags(fs *flag.FlagSet) {
 		"global-synchronization-wait-duration",
 		30*time.Second,
 		"the wait time for the global synchronization mode in multi-region deployments",
-	)
-	fs.BoolVar(
-		&o.EnableRestartIncompatibleProcesses,
-		"enable-restart-incompatible-processes",
-		true,
-		"This flag enables/disables in the operator to restart incompatible fdbserver processes.",
 	)
 	fs.BoolVar(
 		&o.ServerSideApply,
@@ -339,10 +254,7 @@ func StartManager(
 	operatorOpts Options,
 	logOpts zap.Options,
 	clusterReconciler *controllers.FoundationDBClusterReconciler,
-	backupReconciler *controllers.FoundationDBBackupReconciler,
-	restoreReconciler *controllers.FoundationDBRestoreReconciler,
-	logr logr.Logger,
-	watchedObjects ...client.Object) (manager.Manager, *os.File) {
+	logr logr.Logger) (manager.Manager, *os.File) {
 	if operatorOpts.PrintVersion {
 		fmt.Printf("version: %s\n", operatorVersion)
 		os.Exit(0)
@@ -365,63 +277,21 @@ func StartManager(
 	ctrl.SetLogger(logger)
 	log.SetLogger(logger)
 
-	// Might be called by controller-runtime in the future: https://github.com/kubernetes-sigs/controller-runtime/issues/1420
 	klog.SetLogger(logger)
 
 	setupLog := logger.WithName("setup")
 	fdbclient.DefaultCLITimeout = time.Duration(operatorOpts.CliTimeout) * time.Second
 	fdbclient.MaxCliTimeout = time.Duration(operatorOpts.MaxCliTimeout) * time.Second
 
-	// Define the cache options for the client cache used by the operator. If no label selector is defined, the
-	// default cache configuration will be used.
 	cacheOptions := cache.Options{}
-	// Only if a label selector is defined we have to update the cache options.
-	if operatorOpts.LabelSelector != "" {
-		// Parse the label selector, if the label selector is not parsable panic.
-		selector, parseErr := labels.Parse(operatorOpts.LabelSelector)
-		if parseErr != nil {
-			_, _ = fmt.Fprintf(
-				os.Stderr,
-				"could not parse label selector: %s, got error: %s",
-				operatorOpts.LabelSelector,
-				parseErr,
-			)
-			os.Exit(1)
-		}
-
-		// Set the label selector for all resources that the operator manages, this should reduce the resources that
-		// are cached by the operator if a label selector is provided.
-		cacheOptions.DefaultLabelSelector = selector
-	}
-
-	if operatorOpts.WatchNamespace != "" {
-		setupLog.Info(
-			"Operator starting in single namespace mode",
-			"namespace",
-			operatorOpts.WatchNamespace,
-		)
-		cacheOptions.DefaultNamespaces = map[string]cache.Config{
-			operatorOpts.WatchNamespace: {},
-		}
-	} else {
-		setupLog.Info("Operator starting in Global mode")
-	}
 
 	options := ctrl.Options{
 		Scheme: scheme,
 		Metrics: metricsserver.Options{
-			// TODO (johscheuer): Fix: https://github.com/FoundationDB/fdb-kubernetes-operator/issues/1258
 			BindAddress: operatorOpts.MetricsAddr,
 		},
-		LeaderElection:         operatorOpts.EnableLeaderElection,
-		LeaderElectionID:       operatorOpts.LeaderElectionID,
-		LeaseDuration:          &operatorOpts.LeaseDuration,
-		RenewDeadline:          &operatorOpts.RenewDeadline,
-		RetryPeriod:            &operatorOpts.RetryPeriod,
 		Cache:                  cacheOptions,
 		HealthProbeBindAddress: operatorOpts.HealthProbeBindAddress,
-		ReadinessEndpointName:  operatorOpts.HealthProbeBindAddress,
-		LivenessEndpointName:   operatorOpts.HealthProbeBindAddress,
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), options)
@@ -435,117 +305,40 @@ func StartManager(
 		os.Exit(1)
 	}
 
-	labelSelector, err := metav1.ParseToLabelSelector(
-		strings.Trim(operatorOpts.LabelSelector, "\""),
-	)
-	if err != nil {
-		setupLog.Error(err, "unable to parse provided label selector")
-		os.Exit(1)
-	}
-
 	if clusterReconciler != nil {
 		clusterReconciler.Client = mgr.GetClient()
 		clusterReconciler.Recorder = mgr.GetEventRecorderFor("foundationdbcluster-controller")
-		clusterReconciler.DeprecationOptions = operatorOpts.DeprecationOptions
-		clusterReconciler.DatabaseClientProvider = fdbclient.NewDatabaseClientProvider(logger)
 		clusterReconciler.GetTimeout = operatorOpts.GetTimeout
 		clusterReconciler.PostTimeout = operatorOpts.PostTimeout
-		clusterReconciler.Log = logr.WithName("controllers").WithName("FoundationDBCluster")
-		clusterReconciler.EnableRestartIncompatibleProcesses = operatorOpts.EnableRestartIncompatibleProcesses
-		clusterReconciler.ServerSideApply = operatorOpts.ServerSideApply
-		clusterReconciler.EnableRecoveryState = operatorOpts.EnableRecoveryState
-		clusterReconciler.CacheDatabaseStatusForReconciliationDefault = operatorOpts.CacheDatabaseStatus
-		clusterReconciler.ReplaceOnSecurityContextChange = operatorOpts.ReplaceOnSecurityContextChange
-		clusterReconciler.MinimumRequiredUptimeCCBounce = operatorOpts.MinimumRequiredUptimeCCBounce
-		clusterReconciler.MaintenanceListStaleDuration = operatorOpts.MaintenanceListStaleDuration
-		clusterReconciler.MaintenanceListWaitDuration = operatorOpts.MaintenanceListWaitDuration
-		clusterReconciler.MinimumRecoveryTimeForInclusion = operatorOpts.MinimumRecoveryTimeForInclusion
-		clusterReconciler.MinimumRecoveryTimeForExclusion = operatorOpts.MinimumRecoveryTimeForExclusion
-		clusterReconciler.ClusterLabelKeyForNodeTrigger = strings.Trim(
-			operatorOpts.ClusterLabelKeyForNodeTrigger,
-			"\"",
-		)
-		clusterReconciler.Namespace = operatorOpts.WatchNamespace
-		clusterReconciler.GlobalSynchronizationWaitDuration = operatorOpts.GlobalSynchronizationWaitDuration
-		clusterReconciler.HighRunLoopBusyThreshold = operatorOpts.HighRunLoopBusyThreshold
 
-		// If the provided PodLifecycleManager supports the update method, we can set the desired update method, otherwise the
-		// update method will be ignored.
-		castedPodManager, ok := clusterReconciler.PodLifecycleManager.(podmanager.PodLifecycleManagerWithPodUpdateMethod)
-		if ok {
-			setupLog.Info(
-				"Updating pod update method",
-				"podUpdateMethod",
-				operatorOpts.PodUpdateMethod,
-			)
-			castedPodManager.SetUpdateMethod(
-				podmanager.PodUpdateMethod(operatorOpts.PodUpdateMethod),
-			)
-		}
-		if err := clusterReconciler.SetupWithManager(mgr, operatorOpts.MaxConcurrentReconciles, *labelSelector, watchedObjects...); err != nil {
+		clusterReconciler.Log = logr.WithName("controllers").WithName("FoundationDBBaremetalCluster")
+		clusterReconciler.Scheme = mgr.GetScheme()
+
+		if err := clusterReconciler.SetupWithManager(mgr, operatorOpts.MaxConcurrentReconciles); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FoundationDBCluster")
 			os.Exit(1)
 		}
-
-		if operatorOpts.MetricsAddr != "0" {
-			controllers.InitCustomMetrics(clusterReconciler)
-		}
 	}
 
-	if backupReconciler != nil {
-		backupReconciler.Client = mgr.GetClient()
-		backupReconciler.Recorder = mgr.GetEventRecorderFor("foundationdbbackup-controller")
-		backupReconciler.DatabaseClientProvider = fdbclient.NewDatabaseClientProvider(logger)
-		backupReconciler.Log = logr.WithName("controllers").WithName("FoundationDBBackup")
-		backupReconciler.ServerSideApply = operatorOpts.ServerSideApply
-
-		if err := backupReconciler.SetupWithManager(mgr, operatorOpts.MaxConcurrentReconciles, *labelSelector); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "FoundationDBBackup")
-			os.Exit(1)
-		}
-	}
-
-	if restoreReconciler != nil {
-		restoreReconciler.Client = mgr.GetClient()
-		restoreReconciler.Recorder = mgr.GetEventRecorderFor("foundationdbrestore-controller")
-		restoreReconciler.DatabaseClientProvider = fdbclient.NewDatabaseClientProvider(logger)
-		restoreReconciler.Log = logr.WithName("controllers").WithName("FoundationDBRestore")
-		restoreReconciler.ServerSideApply = operatorOpts.ServerSideApply
-
-		if err := restoreReconciler.SetupWithManager(mgr, operatorOpts.MaxConcurrentReconciles, *labelSelector); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "FoundationDBRestore")
-			os.Exit(1)
-		}
-	}
-
-	if operatorOpts.CleanUpOldLogFile {
-		setupLog.V(1).
-			Info("setup log file cleaner", "LogFileMinAge", operatorOpts.LogFileMinAge.String())
-		cleaner := internal.NewCliLogFileCleaner(logger, operatorOpts.LogFileMinAge)
-		ticker := time.NewTicker(operatorOpts.LogFileMinAge)
-		go func() {
-			for {
-				<-ticker.C
-				cleaner.CleanupOldCliLogs()
-			}
-		}()
-	}
-
-	// +kubebuilder:scaffold:builder
-	setupLog.Info("setup manager")
 	return mgr, nil
 }
 
-// MoveFDBBinaries moves FDB binaries that are pulled from setup containers into
-// the correct locations.
 func moveFDBBinaries(log logr.Logger) error {
 	binFile, err := os.Open(os.Getenv("FDB_BINARY_DIR"))
 	if err != nil {
+		if os.IsNotExist(err) {
+			log.Info("No FDB binaries mounted")
+			return nil
+		}
+
 		return err
 	}
-	defer binFile.Close()
+	defer func() {
+		_ = binFile.Close()
+	}()
 
 	libDir, err := os.Open(os.Getenv(fdbv1beta2.EnvNameFDBExternalClientDir))
+
 	if err != nil {
 		if os.IsNotExist(err) {
 			err = os.MkdirAll(
@@ -555,10 +348,14 @@ func moveFDBBinaries(log logr.Logger) error {
 			if err != nil {
 				return err
 			}
-		} else {
-			return err
 		}
+	} else {
+		return err
 	}
+
+	defer func() {
+		_ = libDir.Close()
+	}()
 
 	binDir, err := binFile.Readdir(0)
 	if err != nil {
@@ -604,7 +401,9 @@ func moveFDBBinaries(log logr.Logger) error {
 				}
 			}
 		}
-		_ = versionBinFile.Close()
+		if versionBinFile != nil {
+			_ = versionBinFile.Close()
+		}
 
 		versionLibFile, err := os.Open(
 			path.Join(binFile.Name(), binEntry.Name(), "lib", "libfdb_c.so"),
@@ -621,7 +420,9 @@ func moveFDBBinaries(log logr.Logger) error {
 				return err
 			}
 		}
-		_ = versionLibFile.Close()
+		if versionLibFile != nil {
+			_ = versionLibFile.Close()
+		}
 	}
 
 	return nil

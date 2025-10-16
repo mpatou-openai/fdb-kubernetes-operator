@@ -21,13 +21,15 @@
 package internal
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	fdbv1beta2 "github.com/FoundationDB/fdb-kubernetes-operator/v2/api/v1beta2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 )
 
 // GetConfigMap builds a config map for a cluster's dynamic config
@@ -38,94 +40,35 @@ func GetConfigMap(cluster *fdbv1beta2.FoundationDBCluster) (*corev1.ConfigMap, e
 	data[fdbv1beta2.ClusterFileKey] = connectionString
 	data[fdbv1beta2.RunningVersionKey] = cluster.Status.RunningVersion
 
-	var caFile strings.Builder
-	for _, ca := range cluster.Spec.TrustedCAs {
-		if caFile.Len() > 0 {
-			caFile.WriteString("\n")
-		}
-		caFile.WriteString(ca)
-	}
-
-	if caFile.Len() > 0 {
-		data[fdbv1beta2.CaFileKey] = caFile.String()
-	}
-
 	desiredCountStruct, err := cluster.GetProcessCountsWithDefaults()
 	if err != nil {
 		return nil, err
 	}
 	desiredCounts := desiredCountStruct.Map()
 
-	imageTypes := make(map[fdbv1beta2.ImageType]fdbv1beta2.None, len(cluster.Status.ImageTypes))
-	for _, imageType := range cluster.Status.ImageTypes {
-		imageTypes[imageType] = fdbv1beta2.None{}
-	}
-
 	for processClass, count := range desiredCounts {
 		if count == 0 {
 			continue
 		}
 
-		if _, useUnifiedImage := imageTypes[fdbv1beta2.ImageTypeUnified]; useUnifiedImage {
-			// The serversPerPod argument will be ignored in the config of the unified image as the values are directly
-			// interpolated in the fdb-kubernetes-monitor, based on the "--process-count" command line flag.
-			filename, jsonData, err := getDataForMonitorConf(
+		serversPerPodSlice := []int{1}
+
+		for _, serversPerNode := range serversPerPodSlice {
+			err := setMonitorConfForFilename(
 				cluster,
-				fdbv1beta2.ImageTypeUnified,
+				data,
+				GetConfigMapMonitorConfEntry(
+					processClass,
+					fdbv1beta2.ImageTypeSplit,
+					serversPerNode,
+				),
+				connectionString,
 				processClass,
-				0,
+				serversPerNode,
 			)
 			if err != nil {
 				return nil, err
 			}
-			data[filename] = string(jsonData)
-		}
-
-		if _, useSplitImage := imageTypes[fdbv1beta2.ImageTypeSplit]; useSplitImage {
-			serversPerPodSlice := []int{1}
-			if processClass == fdbv1beta2.ProcessClassStorage {
-				// If the status field is not initialized we fallback to only the specified count
-				// in the cluster spec. This should only happen in the initial phase of a new cluster.
-				if len(cluster.Status.StorageServersPerDisk) == 0 {
-					serversPerPodSlice = []int{cluster.GetDesiredServersPerPod(processClass)}
-				} else {
-					serversPerPodSlice = cluster.Status.StorageServersPerDisk
-				}
-			}
-
-			if processClass.SupportsMultipleLogServers() {
-				// If the status field is not initialized we fallback to only the specified count
-				// in the cluster spec. This should only happen in the initial phase of a new cluster.
-				if len(cluster.Status.LogServersPerDisk) == 0 {
-					serversPerPodSlice = []int{cluster.GetDesiredServersPerPod(processClass)}
-				} else {
-					serversPerPodSlice = cluster.Status.LogServersPerDisk
-				}
-			}
-
-			for _, serversPerPod := range serversPerPodSlice {
-				err := setMonitorConfForFilename(
-					cluster,
-					data,
-					GetConfigMapMonitorConfEntry(
-						processClass,
-						fdbv1beta2.ImageTypeSplit,
-						serversPerPod,
-					),
-					connectionString,
-					processClass,
-					serversPerPod,
-				)
-				if err != nil {
-					return nil, err
-				}
-			}
-		}
-	}
-
-	if cluster.Spec.ConfigMap != nil {
-		for k, v := range cluster.Spec.ConfigMap.Data {
-			data[k] = v
 		}
 	}
 
@@ -138,13 +81,61 @@ func GetConfigMap(cluster *fdbv1beta2.FoundationDBCluster) (*corev1.ConfigMap, e
 	}, nil
 }
 
+// GetJSONHash serializes an object to JSON and takes a hash of the resulting
+// JSON.
+func GetJSONHash(object interface{}) (string, error) {
+	hash := sha256.New()
+	encoder := json.NewEncoder(hash)
+	err := encoder.Encode(object)
+	if err != nil {
+		return "", err
+	}
+	specHash := hash.Sum(make([]byte, 0))
+	return hex.EncodeToString(specHash), nil
+}
+
+// BuildOwnerReference returns an OwnerReference for the provided input
+func BuildOwnerReference(
+	ownerType metav1.TypeMeta,
+	ownerMetadata metav1.ObjectMeta,
+) []metav1.OwnerReference {
+	return []metav1.OwnerReference{{
+		APIVersion: ownerType.APIVersion,
+		Kind:       ownerType.Kind,
+		Name:       ownerMetadata.Name,
+		UID:        ownerMetadata.UID,
+		Controller: ptr.To(true),
+	}}
+}
+
+// GetObjectMetadata returns the ObjectMetadata for a process
+func GetObjectMetadata(
+	cluster *fdbv1beta2.FoundationDBCluster,
+	base *metav1.ObjectMeta,
+) metav1.ObjectMeta {
+	var metadata *metav1.ObjectMeta
+
+	if base != nil {
+		metadata = base.DeepCopy()
+	} else {
+		metadata = &metav1.ObjectMeta{}
+	}
+	metadata.Namespace = cluster.Namespace
+
+	if metadata.Labels == nil {
+		metadata.Labels = make(map[string]string)
+	}
+
+	for label, value := range cluster.GetResourceLabels() {
+		metadata.Labels[label] = value
+	}
+
+	return *metadata
+}
+
 func getConfigMapMetadata(cluster *fdbv1beta2.FoundationDBCluster) metav1.ObjectMeta {
 	var metadata metav1.ObjectMeta
-	if cluster.Spec.ConfigMap != nil {
-		metadata = GetObjectMetadata(cluster, &cluster.Spec.ConfigMap.ObjectMeta, "", "")
-	} else {
-		metadata = GetObjectMetadata(cluster, nil, "", "")
-	}
+	metadata = GetObjectMetadata(cluster, nil)
 
 	metadata.Name = getConfigMapName(cluster.Name)
 
@@ -181,7 +172,7 @@ func setMonitorConfForFilename(
 	if connectionString == "" {
 		data[filename] = ""
 	} else {
-		conf, err := GetMonitorConf(cluster, processClass, nil, serversPerPod, nil)
+		conf, err := GetMonitorConf(cluster, processClass, serversPerPod, nil)
 		if err != nil {
 			return err
 		}

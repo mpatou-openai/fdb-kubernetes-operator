@@ -45,7 +45,6 @@ GO_IMPORTS=$(GOBIN)/goimports
 BUILD_DEPS?=
 BUILDER?="docker"
 BUILDER_ARGS?=
-KUBECTL_ARGS?=
 
 define godep
 BUILD_DEPS+=$(1)
@@ -111,12 +110,6 @@ manager: bin/manager
 bin/manager: ${GO_SRC}
 	go build -ldflags="-s -w -X github.com/FoundationDB/fdb-kubernetes-operator/v2/setup.operatorVersion=${TAG}" -o bin/manager main.go
 
-plugin-go:
-	go build -ldflags="-s -w -X github.com/FoundationDB/fdb-kubernetes-operator/v2/kubectl-fdb/cmd.pluginVersion=${TAG}" -o bin/kubectl-fdb ./kubectl-fdb/main.go
-
-# Build kubectl-fdb binary
-plugin: bin/kubectl-fdb
-
 bin/kubectl-fdb: ${GO_SRC} $(GORELEASER)
 	$(GORELEASER) build --single-target --skip validate --clean
 	@mkdir -p bin
@@ -154,7 +147,7 @@ deploy: $(KUSTOMIZE) install manifests config/development/kustomization.yaml
 manifests: ${MANIFESTS}
 
 ${MANIFESTS}: ${CONTROLLER_GEN} ${GO_SRC}
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./api/..." paths="./controllers/..." output:crd:artifacts:config=config/crd/bases
+	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./api/..." output:crd:artifacts:config=config/crd/bases
 
 # Run go fmt against code
 fmt: deps bin/fmt_check
@@ -183,7 +176,7 @@ ${GENERATED_GO}: ${GO_SRC} hack/boilerplate.go.txt ${CONTROLLER_GEN}
 
 # Build the container image
 container-build:
-	$(BUILDER) build --build-arg=TAG=${TAG} ${img_build_args} $(BUILDER_ARGS) -t ${IMG} .
+	$(BUILDER) buildx build --build-arg=TAG=${TAG} ${img_build_args} $(BUILDER_ARGS) -t ${IMG} .
 
 # Push the container image
 container-push:

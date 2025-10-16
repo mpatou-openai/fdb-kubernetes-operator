@@ -44,76 +44,14 @@ func (factory *Factory) createFDBClusterSpec(
 	config *ClusterConfig,
 	databaseConfiguration fdbv1beta2.DatabaseConfiguration,
 ) *fdbv1beta2.FoundationDBCluster {
-	imageType := fdbv1beta2.ImageTypeSplit
-	if config.GetUseUnifiedImage() {
-		imageType = fdbv1beta2.ImageTypeUnified
-	}
-
-	faultDomain := fdbv1beta2.FoundationDBClusterFaultDomain{
-		Key: "foundationdb.org/none",
-	}
-
-	if config.SimulateCustomFaultDomainEnv {
-		faultDomain.ValueFrom = "$" + fdbv1beta2.EnvNameInstanceID
-		faultDomain.Key = corev1.LabelHostname
-	}
-
-	if config.GetRedundancyMode() == fdbv1beta2.RedundancyModeThreeDataHall {
-		faultDomain.Key = corev1.LabelHostname
-		faultDomain.ValueFrom = ""
-	}
-
 	return &fdbv1beta2.FoundationDBCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      config.Name,
 			Namespace: config.Namespace,
 		},
 		Spec: fdbv1beta2.FoundationDBClusterSpec{
-			MinimumUptimeSecondsForBounce: 30,
-			Version:                       config.GetVersion(),
-			Processes:                     factory.createProcesses(config),
-			DatabaseConfiguration:         databaseConfiguration,
-			StorageServersPerPod:          config.StorageServerPerPod,
-			LogServersPerPod:              config.LogServersPerPod,
-			LogGroup:                      config.Namespace + "-" + config.Name,
-			MainContainer: factory.GetMainContainerOverrides(
-				config,
-			),
-			ImageType: &imageType,
-			SidecarContainer: factory.GetSidecarContainerOverrides(
-				config,
-			),
-			FaultDomain: faultDomain,
-			AutomationOptions: fdbv1beta2.FoundationDBClusterAutomationOptions{
-				// We have to wait long enough to ensure the operator is not recreating too many Pods at the same time.
-				WaitBetweenRemovalsSeconds: ptr.To(0),
-				Replacements: fdbv1beta2.AutomaticReplacementOptions{
-					Enabled: ptr.To(true),
-					// Setting this to 10 minutes is reasonable to prevent the operator recreating Pods when they wait for
-					// new ec2 instances.
-					FailureDetectionTimeSeconds: ptr.To(600),
-					// Setting TaintReplacementTimeSeconds as half of FailureDetectionTimeSeconds to make taint replacement faster
-					TaintReplacementTimeSeconds: ptr.To(150),
-					MaxConcurrentReplacements:   ptr.To(2),
-				},
-				MaintenanceModeOptions: fdbv1beta2.MaintenanceModeOptions{
-					UseMaintenanceModeChecker: ptr.To(config.UseMaintenanceMode),
-				},
-				// Allow the operator to remove all Pods that are excluded and marked for deletion to remove at once.
-				RemovalMode: fdbv1beta2.PodUpdateModeAll,
-				IgnoreLogGroupsForUpgrade: []fdbv1beta2.LogGroup{
-					"fdb-kubernetes-operator",
-				},
-				UseLocalitiesForExclusion: config.UseLocalityBasedExclusions,
-				SynchronizationMode:       ptr.To(string(config.SynchronizationMode)),
-				UseManagementAPI:          config.ManagementAPI,
-			},
-			Routing: fdbv1beta2.RoutingConfig{
-				UseDNSInClusterFile: config.UseDNS,
-				HeadlessService: ptr.To(
-					true,
-				), // to make switching between hostname <-> IP smooth
-			},
+			Version:               config.GetVersion(),
+			DatabaseConfiguration: databaseConfiguration,
 		},
 	}
 }
@@ -310,35 +248,6 @@ func (factory *Factory) createPodTemplate(
 					},
 				},
 			},
-		},
-	}
-}
-
-// createProcesses will generate the ProcessSettings for the cluster configuration.
-func (factory *Factory) createProcesses(
-	config *ClusterConfig,
-) map[fdbv1beta2.ProcessClass]fdbv1beta2.ProcessSettings {
-	claimTemplate := config.generateVolumeClaimTemplate(factory.GetDefaultStorageClass())
-	return map[fdbv1beta2.ProcessClass]fdbv1beta2.ProcessSettings{
-		fdbv1beta2.ProcessClassGeneral: {
-			PodTemplate: factory.createPodTemplate(
-				fdbv1beta2.ProcessClassGeneral,
-				config,
-			),
-			VolumeClaimTemplate: claimTemplate,
-			CustomParameters: config.getCustomParametersForProcessClass(
-				fdbv1beta2.ProcessClassGeneral,
-			),
-		},
-		fdbv1beta2.ProcessClassStorage: {
-			PodTemplate: factory.createPodTemplate(
-				fdbv1beta2.ProcessClassStorage,
-				config,
-			),
-			VolumeClaimTemplate: claimTemplate,
-			CustomParameters: config.getCustomParametersForProcessClass(
-				fdbv1beta2.ProcessClassStorage,
-			),
 		},
 	}
 }

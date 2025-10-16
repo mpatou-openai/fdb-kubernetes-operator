@@ -34,7 +34,6 @@ import (
 	"github.com/onsi/gomega"
 
 	fdbv1beta2 "github.com/FoundationDB/fdb-kubernetes-operator/v2/api/v1beta2"
-	corev1 "k8s.io/api/core/v1"
 )
 
 // getStatusFromOperatorPod returns fdb status queried through the operator Pod.
@@ -421,44 +420,7 @@ func (fdbCluster *FdbCluster) HasTLSEnabled() bool {
 }
 
 // GetCoordinators returns the Pods of the FoundationDBCluster that are having the coordinator role.
-func (fdbCluster *FdbCluster) GetCoordinators() []corev1.Pod {
-	return fdbCluster.GetPodsWithRole(fdbv1beta2.ProcessRoleCoordinator)
-}
-
-// GetCoordinatorsOnLogProcesses returns the Pods of the FoundationDBCluster that have the coordinator role and have the
-// process class log.
-func (fdbCluster *FdbCluster) GetCoordinatorsOnLogProcesses() []corev1.Pod {
-	coordinators := fdbCluster.GetPodsWithRole(fdbv1beta2.ProcessRoleCoordinator)
-	gomega.Expect(coordinators).NotTo(gomega.BeEmpty())
-
-	coordinatorsOnLogProcesses := make([]corev1.Pod, 0, len(coordinators))
-	for _, coordinator := range coordinators {
-		if !GetProcessClass(coordinator).IsTransaction() {
-			continue
-		}
-
-		coordinatorsOnLogProcesses = append(coordinatorsOnLogProcesses, coordinator)
-	}
-
-	if len(coordinatorsOnLogProcesses) == 0 {
-		pickedPod := fdbCluster.factory.RandomPickOnePod(coordinators)
-		fdbCluster.factory.DeletePod(&pickedPod)
-		// Wait for new coordinators
-		time.Sleep(1 * time.Minute)
-		// Fetch all coordinators again
-
-		coordinators = fdbCluster.GetPodsWithRole(fdbv1beta2.ProcessRoleCoordinator)
-		gomega.Expect(coordinators).NotTo(gomega.BeEmpty())
-		for _, coordinator := range coordinators {
-			if !GetProcessClass(coordinator).IsTransaction() {
-				continue
-			}
-
-			coordinatorsOnLogProcesses = append(coordinatorsOnLogProcesses, coordinator)
-		}
-	}
-
-	return coordinatorsOnLogProcesses
+func (fdbCluster *FdbCluster) GetCoordinators() {
 }
 
 // GetStatus returns fdb status queried from a random operator Pod in this clusters namespace.
@@ -470,44 +432,6 @@ func (fdbCluster *FdbCluster) GetStatus() *fdbv1beta2.FoundationDBStatus {
 type RoleInfo struct {
 	Role string
 	ID   string
-}
-
-// GetPodRoleMap returns a map with the process group ID as key and all associated roles.
-func (fdbCluster *FdbCluster) GetPodRoleMap() map[fdbv1beta2.ProcessGroupID][]RoleInfo {
-	ret := make(map[fdbv1beta2.ProcessGroupID][]RoleInfo)
-	status := fdbCluster.GetStatus()
-
-	for _, process := range status.Cluster.Processes {
-		podName := fdbv1beta2.ProcessGroupID(process.Locality[fdbv1beta2.FDBLocalityInstanceIDKey])
-
-		for _, role := range process.Roles {
-			ret[podName] = append(ret[podName], RoleInfo{role.Role, role.ID})
-		}
-	}
-
-	return ret
-}
-
-// GetPodsWithRole returns all Pods that have the provided role.
-func (fdbCluster *FdbCluster) GetPodsWithRole(role fdbv1beta2.ProcessRole) []corev1.Pod {
-	roleMap := fdbCluster.GetPodRoleMap()
-	pods := fdbCluster.GetPods()
-
-	var matches []corev1.Pod
-	for _, p := range pods.Items {
-		roles := roleMap[GetProcessGroupID(p)]
-		rolesAdded := map[string]fdbv1beta2.None{}
-		for _, r := range roles {
-			if r.Role == string(role) {
-				_, ok := rolesAdded[r.Role]
-				if !ok {
-					rolesAdded[r.Role] = fdbv1beta2.None{}
-					matches = append(matches, p)
-				}
-			}
-		}
-	}
-	return matches
 }
 
 // GetCommandlineForProcessesPerClass fetches the commandline args for all processes except of the specified class.

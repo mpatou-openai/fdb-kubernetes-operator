@@ -26,14 +26,12 @@ import (
 	"log"
 	"time"
 
-	fdbv1beta2 "github.com/FoundationDB/fdb-kubernetes-operator/v2/api/v1beta2"
 	"github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 )
@@ -181,39 +179,8 @@ func (factory *Factory) createNamespace(suffix string) string {
 				}
 			}
 
-			backupList := &fdbv1beta2.FoundationDBBackupList{}
-			err = factory.controllerRuntimeClient.List(
-				context.Background(),
-				backupList,
-				client.InNamespace(namespace),
-			)
 			g.Expect(err).NotTo(gomega.HaveOccurred())
 
-			for _, backup := range backupList.Items {
-				if len(backup.Finalizers) > 0 {
-					log.Printf("Removing finalizer from backup %s/%s\n", namespace, backup.Name)
-					gomega.Eventually(func(g gomega.Gomega) {
-						fetchedBackup := &fdbv1beta2.FoundationDBBackup{}
-						err = factory.controllerRuntimeClient.Get(
-							context.Background(),
-							client.ObjectKeyFromObject(ptr.To(backup)),
-							fetchedBackup,
-						)
-						if k8serrors.IsNotFound(err) {
-							return
-						}
-
-						g.Expect(err).NotTo(gomega.HaveOccurred())
-						if len(fetchedBackup.Finalizers) > 0 {
-							fetchedBackup.SetFinalizers([]string{})
-							g.Expect(factory.controllerRuntimeClient.Update(context.Background(), fetchedBackup)).
-								NotTo(gomega.HaveOccurred())
-						}
-
-						g.Expect(fetchedBackup.Finalizers).To(gomega.BeEmpty())
-					}).WithTimeout(1 * time.Minute).WithPolling(1 * time.Second).Should(gomega.Succeed())
-				}
-			}
 		}).WithTimeout(2 * time.Minute).WithPolling(1 * time.Second).Should(gomega.Succeed())
 
 		factory.Delete(&corev1.Namespace{

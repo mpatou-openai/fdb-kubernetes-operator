@@ -22,12 +22,10 @@ package fdbstatus
 
 import (
 	"fmt"
-	"math"
 	"strconv"
 	"strings"
 
 	fdbv1beta2 "github.com/FoundationDB/fdb-kubernetes-operator/v2/api/v1beta2"
-	"github.com/FoundationDB/fdb-kubernetes-operator/v2/pkg/fdbadminclient"
 	"github.com/go-logr/logr"
 )
 
@@ -229,69 +227,6 @@ func clusterStatusHasValidRoleInformation(
 	return true
 }
 
-// CanSafelyRemoveFromStatus checks whether it is safe to remove processes from the cluster, based on the provided status.
-//
-// The list returned by this method will be the addresses that are *not* safe to remove.
-func CanSafelyRemoveFromStatus(
-	logger logr.Logger,
-	client fdbadminclient.AdminClient,
-	addresses []fdbv1beta2.ProcessAddress,
-	status *fdbv1beta2.FoundationDBStatus,
-) ([]fdbv1beta2.ProcessAddress, error) {
-	exclusions := getRemainingAndExcludedFromStatus(logger, status, addresses)
-	logger.Info("Filtering excluded processes",
-		"inProgress", exclusions.inProgress,
-		"fullyExcluded", exclusions.fullyExcluded,
-		"notExcluded", exclusions.notExcluded,
-		"missingInStatus", exclusions.missingInStatus)
-
-	notSafeToDelete := append(exclusions.notExcluded, exclusions.inProgress...)
-	// When we have at least one process that is missing in the status, we have to issue the exclude command to make sure, that those
-	// missing processes can be removed or not.
-	if len(exclusions.missingInStatus) > 0 {
-		err := client.ExcludeProcesses(exclusions.missingInStatus)
-		// When we hit a timeout error here we know that at least one of the missingInStatus is still not fully excluded for safety
-		// we just return the whole slice and don't do any further distinction. We have to return all addresses that are not excluded
-		// and are still in progress, but we don't want to return an error to block further actions on the successfully excluded
-		// addresses.
-		if err != nil {
-			notSafeToDelete = append(notSafeToDelete, exclusions.missingInStatus...)
-		}
-	}
-
-	// Verify that all processes that are assumed to be fully excluded based on the machine-readable status are actually
-	// not serving any roles by running the exclude command again. If those processes are actually fully excluded and are not
-	// serving any roles, the exclude command should terminate quickly, otherwise we will hit a timeout, and we know that
-	// not all processes are fully excluded. This is meant to be an additional safeguard if the machine-readable status
-	// returns the wrong signals.
-	if len(exclusions.fullyExcluded) > 0 {
-		// When we hit a timeout error here we know that at least one of the fullyExcluded is still not fully excluded.
-		return notSafeToDelete, client.ExcludeProcesses(exclusions.fullyExcluded)
-	}
-
-	// All processes that are either not yet marked as excluded or still serving at least one role, cannot be removed safely.
-	return notSafeToDelete, nil
-}
-
-// GetExclusions gets a list of the addresses currently excluded from the database, based on the provided status.
-func GetExclusions(status *fdbv1beta2.FoundationDBStatus) ([]fdbv1beta2.ProcessAddress, error) {
-	excludedServers := status.Cluster.DatabaseConfiguration.ExcludedServers
-	exclusions := make([]fdbv1beta2.ProcessAddress, 0, len(excludedServers))
-	for _, excludedServer := range excludedServers {
-		if excludedServer.Address != "" {
-			pAddr, err := fdbv1beta2.ParseProcessAddress(excludedServer.Address)
-			if err != nil {
-				return nil, err
-			}
-			exclusions = append(exclusions, pAddr)
-		} else {
-			exclusions = append(exclusions, fdbv1beta2.ProcessAddress{StringAddress: excludedServer.Locality})
-		}
-	}
-
-	return exclusions, nil
-}
-
 // GetCoordinatorsFromStatus gets the current coordinators from the status.
 // The returning set will contain all processes by their process group ID.
 func GetCoordinatorsFromStatus(status *fdbv1beta2.FoundationDBStatus) map[string]fdbv1beta2.None {
@@ -311,70 +246,6 @@ func GetCoordinatorsFromStatus(status *fdbv1beta2.FoundationDBStatus) map[string
 	}
 
 	return coordinators
-}
-
-// GetMinimumUptimeAndAddressMap returns address map of the processes included the the foundationdb status. The minimum
-// uptime will be either secondsSinceLastRecovered if the recovery state is supported and enabled otherwise we will
-// take the minimum uptime of all processes.
-func GetMinimumUptimeAndAddressMap(
-	logger logr.Logger,
-	cluster *fdbv1beta2.FoundationDBCluster,
-	status *fdbv1beta2.FoundationDBStatus,
-	recoveryStateEnabled bool,
-) (float64, map[fdbv1beta2.ProcessGroupID][]fdbv1beta2.ProcessAddress, error) {
-	runningVersion, err := fdbv1beta2.ParseFdbVersion(cluster.GetRunningVersion())
-	if err != nil {
-		return 0, nil, err
-	}
-
-	addressMap := make(
-		map[fdbv1beta2.ProcessGroupID][]fdbv1beta2.ProcessAddress,
-		len(status.Cluster.Processes),
-	)
-
-	minimumUptime := math.Inf(1)
-	if runningVersion.SupportsRecoveryState() && recoveryStateEnabled {
-		minimumUptime = status.Cluster.RecoveryState.SecondsSinceLastRecovered
-	}
-
-	for _, process := range status.Cluster.Processes {
-		// Ignore tester processes for this check
-		if process.ProcessClass == fdbv1beta2.ProcessClassTest {
-			continue
-		}
-		// We have seen cases where a process is still reported, only with the role and the class but missing the localities.
-		// in this case we want to ignore this process as it seems like the process is miss behaving.
-		processGroupID, ok := process.Locality[fdbv1beta2.FDBLocalityInstanceIDKey]
-		if !ok {
-			logger.Info("Ignoring process with missing localities", "address", process.Address)
-			continue
-		}
-
-		addressMap[fdbv1beta2.ProcessGroupID(processGroupID)] = append(
-			addressMap[fdbv1beta2.ProcessGroupID(process.Locality[fdbv1beta2.FDBLocalityInstanceIDKey])],
-			process.Address,
-		)
-
-		if process.Excluded {
-			continue
-		}
-
-		// Ignore cases where the uptime seconds is exactly 0.0, this would mean that the process was exactly restarted at the time the FoundationDB cluster status
-		// was queried. In most cases this only reflects an issue with the process or the status.
-		if process.UptimeSeconds == 0.0 {
-			continue
-		}
-
-		// If the SecondsSinceLastRecovered is higher than the process uptime, we want to use the process uptime, e.g. in
-		// cases where only storage processes are restarted.
-		if process.UptimeSeconds < minimumUptime {
-			logger.V(1).
-				Info("Process uptime is less than the last recovery", "processGroupID", process.Address, "minimumUptime", minimumUptime, "process.UptimeSeconds", process.UptimeSeconds)
-			minimumUptime = process.UptimeSeconds
-		}
-	}
-
-	return minimumUptime, addressMap, nil
 }
 
 // DoStorageServerFaultDomainCheckOnStatus does a storage server related fault domain check over the given status object.
@@ -762,44 +633,6 @@ func CheckQosStatus(status *fdbv1beta2.FoundationDBStatus) error {
 	}
 
 	return nil
-}
-
-// GetExcludedLocalitiesFromStatus returns the excluded localities based on the machine-readable status. If the provided status is empty a new status is fetched.
-func GetExcludedLocalitiesFromStatus(
-	logger logr.Logger,
-	cluster *fdbv1beta2.FoundationDBCluster,
-	status *fdbv1beta2.FoundationDBStatus,
-	getAdminClient func(logger logr.Logger, cluster *fdbv1beta2.FoundationDBCluster) (fdbadminclient.AdminClient, error),
-) (map[fdbv1beta2.ProcessGroupID]fdbv1beta2.None, error) {
-	exclusions := map[fdbv1beta2.ProcessGroupID]fdbv1beta2.None{}
-	if cluster.UseLocalitiesForExclusion() {
-		if status == nil {
-			adminClient, err := getAdminClient(logger, cluster)
-			if err != nil {
-				return exclusions, err
-			}
-
-			status, err = adminClient.GetStatus()
-			if err != nil {
-				return exclusions, err
-			}
-		}
-
-		prefix := fdbv1beta2.FDBLocalityExclusionPrefix + ":"
-		for _, excludedServer := range status.Cluster.DatabaseConfiguration.ExcludedServers {
-			if excludedServer.Locality == "" {
-				continue
-			}
-
-			processGroupID, found := strings.CutPrefix(excludedServer.Locality, prefix)
-			if !found {
-				continue
-			}
-			exclusions[fdbv1beta2.ProcessGroupID(processGroupID)] = fdbv1beta2.None{}
-		}
-	}
-
-	return exclusions, nil
 }
 
 // CanSafelyRemoveMaintenanceMode will return true if the maintenance mode can be disabled.

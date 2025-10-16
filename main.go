@@ -1,5 +1,4 @@
 /*
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -21,8 +20,6 @@ import (
 
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
-	"github.com/FoundationDB/fdb-kubernetes-operator/v2/pkg/podmanager"
-
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -33,7 +30,6 @@ import (
 	fdbv1beta2 "github.com/FoundationDB/fdb-kubernetes-operator/v2/api/v1beta2"
 	"github.com/FoundationDB/fdb-kubernetes-operator/v2/controllers"
 	"github.com/FoundationDB/fdb-kubernetes-operator/v2/setup"
-	// +kubebuilder:scaffold:imports
 )
 
 var (
@@ -43,7 +39,6 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(fdbv1beta2.AddToScheme(scheme))
-	// +kubebuilder:scaffold:scheme
 }
 
 func main() {
@@ -59,12 +54,9 @@ func main() {
 		scheme,
 		operatorOpts,
 		logOpts,
-		controllers.NewFoundationDBClusterReconciler(
-			&podmanager.StandardPodLifecycleManager{},
-		),
-		&controllers.FoundationDBBackupReconciler{},
-		&controllers.FoundationDBRestoreReconciler{},
-		ctrl.Log)
+		controllers.NewFoundationDBClusterReconciler(),
+		ctrl.Log,
+	)
 
 	if file != nil {
 		defer func() {

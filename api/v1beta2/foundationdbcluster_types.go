@@ -17,7 +17,6 @@ limitations under the License.
 package v1beta2
 
 import (
-	"errors"
 	"fmt"
 	"math"
 	"math/rand"
@@ -26,26 +25,15 @@ import (
 	"strings"
 	"time"
 
-	"k8s.io/utils/ptr"
-
-	"k8s.io/apimachinery/pkg/util/intstr"
-
 	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:shortName=fdb
+// +kubebuilder:resource:shortName=bmfdb
 // +kubebuilder:subresource:status
 // +kubebuilder:metadata:annotations="foundationdb.org/release=v2.15.0"
-// +kubebuilder:printcolumn:name="Generation",type="integer",JSONPath=".metadata.generation",description="Latest generation of the spec",priority=0
-// +kubebuilder:printcolumn:name="Reconciled",type="integer",JSONPath=".status.generations.reconciled",description="Last reconciled generation of the spec",priority=0
-// +kubebuilder:printcolumn:name="Available",type="boolean",JSONPath=".status.health.available",description="Database available",priority=0
-// +kubebuilder:printcolumn:name="FullReplication",type="boolean",JSONPath=".status.health.fullReplication",description="Database fully replicated",priority=0
-// +kubebuilder:printcolumn:name="ReconciledProcessGroups",type="integer",JSONPath=".status.reconciledProcessGroups",description="Number of reconciled process groups",priority=1
-// +kubebuilder:printcolumn:name="DesiredProcessGroups",type="integer",JSONPath=".status.desiredProcessGroups",description="Desired number of process groups",priority=1
 // +kubebuilder:printcolumn:name="Version",type="string",JSONPath=".status.runningVersion",description="Running version",priority=0
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 // +kubebuilder:storageversion
@@ -106,162 +94,6 @@ type FoundationDBClusterSpec struct {
 
 	// DatabaseConfiguration defines the database configuration.
 	DatabaseConfiguration DatabaseConfiguration `json:"databaseConfiguration,omitempty"`
-
-	// Processes defines process-level settings.
-	Processes map[ProcessClass]ProcessSettings `json:"processes,omitempty"`
-
-	// ProcessCounts defines the number of processes to configure for each
-	// process class. You can generally omit this, to allow the operator to
-	// infer the process counts based on the database configuration.
-	ProcessCounts ProcessCounts `json:"processCounts,omitempty"`
-
-	// SeedConnectionString provides an additional connection string. This connection string will be used in addition
-	// to the connection string defined under cluster.Status.ConnectionString to connect to the cluster. This setting
-	// can be used to create a multi-region cluster or to recover a cluster if it is out of sync.
-	SeedConnectionString string `json:"seedConnectionString,omitempty"`
-
-	// PartialConnectionString provides a way to specify part of the
-	// connection string (e.g. the database name and coordinator generation)
-	// without specifying the entire string. This does not allow for setting
-	// the coordinator IPs. If `SeedConnectionString` is set,
-	// `PartialConnectionString` will have no effect. They cannot be used
-	// together.
-	PartialConnectionString ConnectionString `json:"partialConnectionString,omitempty"`
-
-	// FaultDomain defines the rules for what fault domain to replicate across.
-	FaultDomain FoundationDBClusterFaultDomain `json:"faultDomain,omitempty"`
-
-	// ProcessGroupsToRemove defines the process groups that we should remove from the
-	// cluster. This list contains the process group IDs.
-	// +kubebuilder:validation:MinItems=0
-	// +kubebuilder:validation:MaxItems=500
-	ProcessGroupsToRemove []ProcessGroupID `json:"processGroupsToRemove,omitempty"`
-
-	// ProcessGroupsToRemoveWithoutExclusion defines the process groups that we should
-	// remove from the cluster without excluding them. This list contains the
-	// process group IDs.
-	//
-	// This should be used for cases where a pod does not have an IP address and
-	// you want to remove it and destroy its volume without confirming the data
-	// is fully replicated.
-	// +kubebuilder:validation:MinItems=0
-	// +kubebuilder:validation:MaxItems=500
-	ProcessGroupsToRemoveWithoutExclusion []ProcessGroupID `json:"processGroupsToRemoveWithoutExclusion,omitempty"`
-
-	// ConfigMap allows customizing the config map the operator creates.
-	ConfigMap *corev1.ConfigMap `json:"configMap,omitempty"`
-
-	// MainContainer defines customization for the foundationdb container.
-	MainContainer ContainerOverrides `json:"mainContainer,omitempty"`
-
-	// SidecarContainer defines customization for the
-	// foundationdb-kubernetes-sidecar container.
-	SidecarContainer ContainerOverrides `json:"sidecarContainer,omitempty"`
-
-	// TrustedCAs defines a list of root CAs the cluster should trust, in PEM
-	// format.
-	TrustedCAs []string `json:"trustedCAs,omitempty"`
-
-	// SidecarVariables defines Custom variables that the sidecar should make
-	// available for substitution in the monitor conf file.
-	SidecarVariables []string `json:"sidecarVariables,omitempty"`
-
-	// LogGroup defines the log group to use for the trace logs for the cluster.
-	LogGroup string `json:"logGroup,omitempty"`
-
-	// DataCenter defines the data center where these processes are running.
-	DataCenter string `json:"dataCenter,omitempty"`
-
-	// DataHall defines the data hall where these processes are running.
-	DataHall string `json:"dataHall,omitempty"`
-
-	// AutomationOptions defines customization for enabling or disabling certain
-	// operations in the operator.
-	AutomationOptions FoundationDBClusterAutomationOptions `json:"automationOptions,omitempty"`
-
-	// ProcessGroupIDPrefix defines a prefix to append to the process group IDs in the
-	// locality fields.
-	//
-	// This must be a valid Kubernetes label value. See
-	// https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set
-	// for more details on that.
-	// +kubebuilder:validation:MaxLength=43
-	// +kubebuilder:validation:Pattern:=^[a-z0-9A-Z]([\-._a-z0-9A-Z])*[a-z0-9A-Z]$
-	ProcessGroupIDPrefix string `json:"processGroupIDPrefix,omitempty"`
-
-	// LockOptions allows customizing how we manage locks for global operations.
-	LockOptions LockOptions `json:"lockOptions,omitempty"`
-
-	// Routing defines the configuration for routing to our pods.
-	Routing RoutingConfig `json:"routing,omitempty"`
-
-	// IgnoreUpgradabilityChecks determines whether we should skip the checks for
-	// version compatibility when performing an upgrade.
-	IgnoreUpgradabilityChecks bool `json:"ignoreUpgradabilityChecks,omitempty"`
-
-	// Buggify defines settings for injecting faults into a cluster for testing.
-	Buggify BuggifyConfig `json:"buggify,omitempty"`
-
-	// StorageServersPerPod defines how many Storage Servers should run in
-	// a single process group (Pod). This number defines the number of processes running
-	// in one Pod whereas the ProcessCounts defines the number of Pods created.
-	// This means that you end up with ProcessCounts["storage"] * StorageServersPerPod
-	// storage processes.
-	StorageServersPerPod int `json:"storageServersPerPod,omitempty"`
-
-	// LogServersPerPod defines how many Log Servers should run in
-	// a single process group (Pod). This number defines the number of processes running
-	// in one Pod whereas the ProcessCounts defines the number of Pods created.
-	// This means that you end up with ProcessCounts["Log"] * LogServersPerPod
-	// log processes. This also affects processes with the transaction class.
-	LogServersPerPod int `json:"logServersPerPod,omitempty"`
-
-	// MinimumUptimeSecondsForBounce defines the minimum time, in seconds, that the
-	// processes in the cluster must have been up for before the operator can
-	// execute a bounce.
-	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:default:=600
-	MinimumUptimeSecondsForBounce int `json:"minimumUptimeSecondsForBounce,omitempty"`
-
-	// ReplaceInstancesWhenResourcesChange defines if an instance should be replaced
-	// when the resource requirements are increased. This can be useful with the combination of
-	// local storage.
-	// +kubebuilder:default:=false
-	ReplaceInstancesWhenResourcesChange *bool `json:"replaceInstancesWhenResourcesChange,omitempty"`
-
-	// Skip defines if the cluster should be skipped for reconciliation. This can be useful for
-	// investigating in issues or if the environment is unstable.
-	// +kubebuilder:default:=false
-	Skip bool `json:"skip,omitempty"`
-
-	// CoordinatorSelection defines which process classes are eligible for coordinator selection.
-	// If empty all stateful processes classes are equally eligible.
-	// A higher priority means that a process class is preferred over another process class.
-	// If the FoundationDB cluster is spans across multiple Kubernetes clusters or DCs the
-	// CoordinatorSelection must match in all FoundationDB cluster resources otherwise
-	// the coordinator selection process could conflict.
-	CoordinatorSelection []CoordinatorSelectionSetting `json:"coordinatorSelection,omitempty"`
-
-	// LabelConfig allows customizing labels used by the operator.
-	LabelConfig LabelConfig `json:"labels,omitempty"`
-
-	// UseExplicitListenAddress determines if we should add a listen address
-	// that is separate from the public address.
-	// Deprecated: This setting will be removed in the next major release.
-	UseExplicitListenAddress *bool `json:"useExplicitListenAddress,omitempty"`
-
-	// ImageType defines the image type that should be used for the FoundationDBCluster deployment. When the type
-	// is set to "unified" the deployment will use the new fdb-kubernetes-monitor. Otherwise the main container and
-	// the sidecar container will use different images.
-	// Default: split
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:validation:Enum=split;unified
-	// +kubebuilder:default:=unified
-	ImageType *ImageType `json:"imageType,omitempty"`
-
-	// MaxZonesWithUnavailablePods defines the maximum number of zones that can have unavailable pods during the update process.
-	// When unset, there is no limit to the  number of zones with unavailable pods.
-	MaxZonesWithUnavailablePods *int `json:"maxZonesWithUnavailablePods,omitempty"`
 }
 
 // ImageType defines a single kind of images used in the cluster.
@@ -288,17 +120,9 @@ type FoundationDBClusterStatus struct {
 	// Health provides information about the health of the database.
 	Health ClusterHealth `json:"health,omitempty"`
 
-	// RequiredAddresses define that addresses that we need to enable for the
-	// processes in the cluster.
-	RequiredAddresses RequiredAddressSet `json:"requiredAddresses,omitempty"`
-
 	// HasIncorrectConfigMap indicates whether the latest config map is out
 	// of date with the cluster spec.
 	HasIncorrectConfigMap bool `json:"hasIncorrectConfigMap,omitempty"`
-
-	// HasIncorrectServiceConfig indicates whether the cluster has service
-	// config that is out of date with the cluster spec.
-	HasIncorrectServiceConfig bool `json:"hasIncorrectServiceConfig,omitempty"`
 
 	// NeedsNewCoordinators indicates whether the cluster needs to recruit
 	// new coordinators to fulfill its fault tolerance requirements.
@@ -314,42 +138,9 @@ type FoundationDBClusterStatus struct {
 	// Configured defines whether we have configured the database yet.
 	Configured bool `json:"configured,omitempty"`
 
-	// HasListenIPsForAllPods defines whether every pod has an environment
-	// variable for its listen address.
-	HasListenIPsForAllPods bool `json:"hasListenIPsForAllPods,omitempty"`
-
-	// StorageServersPerDisk defines the storageServersPerPod observed in the cluster.
-	// If there are more than one value in the slice the reconcile phase is not finished.
-	// +kubebuilder:validation:MaxItems=5
-	StorageServersPerDisk []int `json:"storageServersPerDisk,omitempty"`
-
-	// LogServersPerDisk defines the LogServersPerDisk observed in the cluster.
-	// If there are more than one value in the slice the reconcile phase is not finished.
-	// +kubebuilder:validation:MaxItems=5
-	LogServersPerDisk []int `json:"logServersPerDisk,omitempty"`
-
-	// ImageTypes defines the kinds of images that are in use in the cluster.
-	// If there is more than one value in the slice the reconcile phase is not
-	// finished.
-	// +kubebuilder:validation:MaxItems=10
-	ImageTypes []ImageType `json:"imageTypes,omitempty"`
-
-	// ProcessGroups contain information about a process group.
-	// This information is used in multiple places to trigger the according action.
-	ProcessGroups []*ProcessGroupStatus `json:"processGroups,omitempty"`
-
-	// Locks contains information about the locking system.
-	Locks LockSystemStatus `json:"locks,omitempty"`
-
 	// MaintenenanceModeInfo contains information regarding process groups in maintenance mode
 	// Deprecated: This setting is not used anymore.
 	MaintenanceModeInfo MaintenanceModeInfo `json:"maintenanceModeInfo,omitempty"`
-
-	// DesiredProcessGroups reflects the number of expected running process groups.
-	DesiredProcessGroups int `json:"desiredProcessGroups,omitempty"`
-
-	// ReconciledProcessGroups reflects the number of process groups that have no condition and are not marked for removal.
-	ReconciledProcessGroups int `json:"reconciledProcessGroups,omitempty"`
 }
 
 // MaintenanceModeInfo contains information regarding the zone and process groups that are put
@@ -967,21 +758,6 @@ func (processGroupStatus *ProcessGroupStatus) MatchesConditions(
 	return equality.Semantic.DeepEqual(matchingConditions, conditionRules)
 }
 
-// ProcessGroupsByProcessClass returns a slice of all Process Groups that contains a given process class.
-func (clusterStatus FoundationDBClusterStatus) ProcessGroupsByProcessClass(
-	processClass ProcessClass,
-) []*ProcessGroupStatus {
-	result := make([]*ProcessGroupStatus, 0)
-
-	for _, groupStatus := range clusterStatus.ProcessGroups {
-		if groupStatus.ProcessClass == processClass {
-			result = append(result, groupStatus)
-		}
-	}
-
-	return result
-}
-
 // GetConditionTime returns the timestamp when we detected a condition on a
 // process group.
 // If there is no matching condition this will return nil.
@@ -1257,129 +1033,6 @@ type ClusterHealth struct {
 	DataMovementPriority int `json:"dataMovementPriority,omitempty"`
 }
 
-// FoundationDBClusterAutomationOptions provides flags for enabling or disabling
-// operations that can be performed on a cluster.
-type FoundationDBClusterAutomationOptions struct {
-	// ConfigureDatabase defines whether the operator is allowed to reconfigure
-	// the database.
-	ConfigureDatabase *bool `json:"configureDatabase,omitempty"`
-
-	// KillProcesses defines whether the operator is allowed to bounce fdbserver
-	// processes.
-	KillProcesses *bool `json:"killProcesses,omitempty"`
-
-	// CacheDatabaseStatusForReconciliation defines whether the operator is using the same FoundationDB machine-readable
-	// status for all sub-reconcilers or if the machine-readable status should be fetched by ever sub-reconciler if
-	// required. Enabling this setting might improve the operator reconciliation speed for large clusters.
-	CacheDatabaseStatusForReconciliation *bool `json:"cacheDatabaseStatusForReconciliation,omitempty"`
-
-	// Replacements contains options for automatically replacing failed
-	// processes.
-	Replacements AutomaticReplacementOptions `json:"replacements,omitempty"`
-
-	// IgnorePendingPodsDuration defines how long a Pod has to be in the Pending Phase before
-	// ignore it during reconciliation. This prevents Pod that are stuck in Pending to block
-	// further reconciliation.
-	IgnorePendingPodsDuration time.Duration `json:"ignorePendingPodsDuration,omitempty"`
-
-	// UseNonBlockingExcludes defines whether the operator is allowed to use non blocking exclude commands.
-	// The default is false.
-	UseNonBlockingExcludes *bool `json:"useNonBlockingExcludes,omitempty"`
-
-	// UseLocalitiesForExclusion defines whether the exclusions are done using localities instead of IP addresses. This
-	// feature requires at least FDB 7.1.42 or 7.3.26.
-	// The default is false.
-	UseLocalitiesForExclusion *bool `json:"useLocalitiesForExclusion,omitempty"`
-
-	// IgnoreTerminatingPodsSeconds defines how long a Pod has to be in the Terminating Phase before
-	// we ignore it during reconciliation. This prevents Pod that are stuck in Terminating to block
-	// further reconciliation.
-	IgnoreTerminatingPodsSeconds *int `json:"ignoreTerminatingPodsSeconds,omitempty"`
-
-	// IgnoreMissingProcessesSeconds defines how long a process group has to be in the MissingProcess condition until
-	// it will be ignored during reconciliation. This prevents that a process will block reconciliation.
-	IgnoreMissingProcessesSeconds *int `json:"ignoreMissingProcessesSeconds,omitempty"`
-
-	// FailedPodDurationSeconds defines the duration a Pod can stay in the deleted state (deletionTimestamp != 0) before
-	// it gets marked as PodFailed. This is important in cases where a fdbserver process is still reporting but the
-	// Pod resource is marked for deletion. This can happen when the kubelet or a node fails. Setting this condition
-	// will ensure that the operator is replacing affected Pods.
-	FailedPodDurationSeconds *int `json:"failedPodDurationSeconds,omitempty"`
-
-	// MaxConcurrentReplacements defines how many process groups can be concurrently
-	// replaced if they are misconfigured. If the value will be set to 0 this will block replacements
-	// and these misconfigured Pods must be replaced manually or by another process. For each reconcile
-	// loop the operator calculates the maximum number of possible replacements by taken this value as the
-	// upper limit and removes all ongoing replacements that have not finished. Which means if the value is
-	// set to 5 and we have 4 ongoing replacements (process groups marked with remove but not excluded) the
-	// operator is allowed to replace on further process group.
-	// +kubebuilder:validation:Minimum=0
-	MaxConcurrentReplacements *int `json:"maxConcurrentReplacements,omitempty"`
-
-	// DeletionMode defines the deletion mode for this cluster. This can be
-	// PodUpdateModeNone, PodUpdateModeAll, PodUpdateModeZone or PodUpdateModeProcessGroup. The
-	// DeletionMode defines how Pods are deleted in order to update them or
-	// when they are removed.
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:validation:Enum=All;Zone;ProcessGroup;None
-	// +kubebuilder:default:=Zone
-	DeletionMode PodUpdateMode `json:"deletionMode,omitempty"`
-
-	// RemovalMode defines the removal mode for this cluster. This can be
-	// PodUpdateModeNone, PodUpdateModeAll, PodUpdateModeZone or PodUpdateModeProcessGroup. The
-	// RemovalMode defines how process groups are deleted in order when they
-	// are marked for removal.
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:validation:Enum=All;Zone;ProcessGroup;None
-	// +kubebuilder:default:=Zone
-	RemovalMode PodUpdateMode `json:"removalMode,omitempty"`
-
-	// WaitBetweenRemovalsSeconds defines how long to wait between the last removal and the next removal. This is only an
-	// upper limit if the process group and the according resources are deleted faster than the provided duration the
-	// operator will move on with the next removal. The idea is to prevent a race condition were the operator deletes
-	// a resource but the Kubernetes API is slower to trigger the actual deletion, and we are running into a situation
-	// where the fault tolerance check still includes the already deleted processes.
-	// Defaults to 60.
-	WaitBetweenRemovalsSeconds *int `json:"waitBetweenRemovalsSeconds,omitempty"`
-
-	// PodUpdateStrategy defines how Pod spec changes are rolled out either by replacing Pods or by deleting Pods.
-	// The default for this is ReplaceTransactionSystem.
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:validation:Enum=Replace;ReplaceTransactionSystem;Delete
-	// +kubebuilder:default:=ReplaceTransactionSystem
-	PodUpdateStrategy PodUpdateStrategy `json:"podUpdateStrategy,omitempty"`
-
-	// UseManagementAPI defines if the operator should make use of the management API instead of
-	// using fdbcli to interact with the FoundationDB cluster.
-	UseManagementAPI *bool `json:"useManagementAPI,omitempty"`
-
-	// MaintenanceModeOptions contains options for maintenance mode related settings.
-	MaintenanceModeOptions MaintenanceModeOptions `json:"maintenanceModeOptions,omitempty"`
-
-	// IgnoreLogGroupsForUpgrade defines the list of LogGroups that should be ignored during fdb version upgrade.
-	// The default is a list that includes "fdb-kubernetes-operator".
-	// +kubebuilder:validation:MaxItems=10
-	IgnoreLogGroupsForUpgrade []LogGroup `json:"ignoreLogGroupsForUpgrade,omitempty"`
-
-	// SynchronizationMode defines the synchronization mode for clusters that are managed by multiple operator instances.
-	// The default is "local" which means all operator instances are only acting on their local processes, with the exception for
-	// cluster upgrades. In the "global" mode the operator instances coordinate actions to only issue a single
-	// exclude/bounce/include to reduce the disruptions. The global coordination mode is based on an optimistic mode
-	// and there are no guarantees that the action will only be executed once, e.g. because of a slow operator instance.
-	//
-	// More details:
-	// https://github.com/FoundationDB/fdb-kubernetes-operator/blob/main/docs/design/better_coordination_multi_operator.md
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:validation:Enum=local;global
-	// +kubebuilder:default:=local
-	SynchronizationMode *string `json:"synchronizationMode,omitempty"`
-
-	// DatabaseInteractionMode defines how the operator should interact with the FDB cluster. Possible options right now
-	// are "fdbcli", which is the default way and "managementapi" which will make use of the management module in FDB:
-	// https://apple.github.io/foundationdb/special-keys.html#management-module.
-	DatabaseInteractionMode *DatabaseInteractionMode `json:"databaseInteractionMode,omitempty"`
-}
-
 // DatabaseInteractionMode defines how the operator should interact with the FDB cluster.
 // +kubebuilder:validation:MaxLength=256
 type DatabaseInteractionMode string
@@ -1396,601 +1049,6 @@ const (
 // clients during an upgrade.
 // +kubebuilder:validation:MaxLength=256
 type LogGroup string
-
-// MaintenanceModeOptions controls options for placing zones in maintenance mode.
-type MaintenanceModeOptions struct {
-	// UseMaintenanceModeChecker defines whether the operator is allowed to use maintenance mode before updating pods.
-	// If this setting is set to true the operator will set and reset the maintenance mode when updating pods. If this
-	// setting is set to true, then ResetMaintenanceMode will also be enabled to make sure the operator is able to
-	// reset the maintenance mode again.
-	// Default is false.
-	UseMaintenanceModeChecker *bool `json:"UseMaintenanceModeChecker,omitempty"`
-
-	// ResetMaintenanceMode defines whether the operator should reset the maintenance mode if all storage processes
-	// under the maintenance zone have been restarted. The default is false. For more details see:
-	// https://github.com/FoundationDB/fdb-kubernetes-operator/v2/blob/improve-maintenance-mode-integration/docs/manual/operations.md#maintenance
-	// Default is false.
-	ResetMaintenanceMode *bool `json:"resetMaintenanceMode,omitempty"`
-
-	// MaintenanceModeTimeSeconds provides the duration for the zone to be in maintenance. It will automatically be switched off after the time elapses.
-	// Default is 600.
-	MaintenanceModeTimeSeconds *int `json:"maintenanceModeTimeSeconds,omitempty"`
-}
-
-// TaintReplacementOption defines the taint key and taint duration the operator will react to a tainted node
-// Example of TaintReplacementOption
-//   - key: "example.org/maintenance"
-//     durationInSeconds: 7200 # Ensure the taint is present for at least 2 hours before replacing Pods on a node with this taint.
-//   - key: "*" # The wildcard would allow to define a catch all configuration
-//     durationInSeconds: 3600 # Ensure the taint is present for at least 1 hour before replacing Pods on a node with this taint
-//
-// Setting durationInSeconds to the maximum of int64 will practically disable the taint key.
-// When a Node taint key matches both an exact TaintReplacementOption key and a wildcard key, the exact matched key will be used.
-type TaintReplacementOption struct {
-	// Tainted key
-	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern:=^([\-._\/a-z0-9A-Z\*])*$
-	// +kubebuilder:validation:Required
-	Key *string `json:"key,omitempty"`
-
-	// The tainted key must be present for DurationInSeconds before operator replaces pods on the node with this taint;
-	// DurationInSeconds cannot be a negative number.
-	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:Minimum=0
-	DurationInSeconds *int64 `json:"durationInSeconds,omitempty"`
-}
-
-// AutomaticReplacementOptions controls options for automatically replacing
-// failed processes.
-type AutomaticReplacementOptions struct {
-	// Enabled controls whether automatic replacements are enabled.
-	// The default is false.
-	Enabled *bool `json:"enabled,omitempty"`
-
-	// FaultDomainBasedReplacements controls whether automatic replacements are targeting all failed process groups
-	// in a fault domain or only specific Process Groups. If this setting is enabled, the number of different fault
-	// domains that can have all their failed process groups replaced at the same time will be equal to MaxConcurrentReplacements.
-	// e.g. MaxConcurrentReplacements = 2 would mean that at most 2 different fault domains can have
-	// their failed process groups replaced at the same time.
-	// The default is false.
-	FaultDomainBasedReplacements *bool `json:"faultDomainBasedReplacements,omitempty"`
-
-	// FailureDetectionTimeSeconds controls how long a process must be
-	// failed or missing before it is automatically replaced.
-	// The default is 7200 seconds, or 2 hours.
-	FailureDetectionTimeSeconds *int `json:"failureDetectionTimeSeconds,omitempty"`
-
-	// TaintReplacementTimeSeconds controls how long a pod stays in NodeTaintReplacing condition
-	// before it is automatically replaced.
-	// The default is 1800 seconds, i.e., 30min
-	TaintReplacementTimeSeconds *int `json:"taintReplacementTimeSeconds,omitempty"`
-
-	// MaxConcurrentReplacements controls how many automatic replacements are allowed to take part.
-	// This will take the list of current replacements and then calculate the difference between
-	// maxConcurrentReplacements and the size of the list. e.g. if currently 3 replacements are
-	// queued (e.g. in the processGroupsToRemove list) and maxConcurrentReplacements is 5 the operator
-	// is allowed to replace at most 2 process groups. Setting this to 0 will basically disable the automatic
-	// replacements.
-	// +kubebuilder:default:=1
-	// +kubebuilder:validation:Minimum=0
-	MaxConcurrentReplacements *int `json:"maxConcurrentReplacements,omitempty"`
-
-	// TaintReplacementOption controls which taint label the operator will react to.
-	// +kubebuilder:validation:MaxItems=32
-	TaintReplacementOptions []TaintReplacementOption `json:"taintReplacementOptions,omitempty"`
-
-	// MaxFaultDomainsWithTaintedProcessGroups defines how many fault domains in the cluster can have process groups
-	// with the NodeTaintReplacing condition and still allow the operator to automatically replace those process groups.
-	// If more fault domains contain process groups with the NodeTaintReplacing condition, the operator will not
-	// automatically replace those process groups. This is a safeguard in addition to MaxConcurrentReplacements to make
-	// sure the operator is not replacing too many process groups if a large number of nodes are tainted. A absolute number
-	// of fault domains or a percentage can be provided.
-	// Defaults to 10% of the fault domains or at least 1.
-	// +kubebuilder:validation:XIntOrString
-	MaxFaultDomainsWithTaintedProcessGroups *intstr.IntOrString `json:"maxFaultDomainsWithTaintedProcessGroups,omitempty"`
-}
-
-// ProcessSettings defines process-level settings.
-type ProcessSettings struct {
-	// PodTemplate allows customizing the pod. If a container image with a tag is specified the operator
-	// will throw an error and stop processing the cluster.
-	PodTemplate *corev1.PodTemplateSpec `json:"podTemplate,omitempty"`
-
-	// VolumeClaimTemplate allows customizing the persistent volume claim for the
-	// pod.  This will be ignored by the operator for stateless processes.
-	VolumeClaimTemplate *corev1.PersistentVolumeClaim `json:"volumeClaimTemplate,omitempty"`
-
-	// CustomParameters defines additional parameters to pass to the fdbserver
-	// process. Only parameters for the [fdbserver] section are supported. Parameters
-	// from the [general] and [fdbmonitor] section are not supported. For more Information
-	// see: https://apple.github.io/foundationdb/configuration.html#general-section
-	CustomParameters FoundationDBCustomParameters `json:"customParameters,omitempty"`
-}
-
-// GetProcessSettings gets settings for a process.
-func (cluster *FoundationDBCluster) GetProcessSettings(processClass ProcessClass) ProcessSettings {
-	merged := ProcessSettings{}
-	entries := make([]ProcessSettings, 0, 2)
-
-	entry, present := cluster.Spec.Processes[processClass]
-	if present {
-		entries = append(entries, entry)
-	}
-
-	entries = append(entries, cluster.Spec.Processes[ProcessClassGeneral])
-	for _, entry := range entries {
-		if merged.PodTemplate == nil {
-			merged.PodTemplate = entry.PodTemplate
-		}
-		if merged.VolumeClaimTemplate == nil &&
-			processClass.IsStateful() { // stateless pods will not use a PVC
-			merged.VolumeClaimTemplate = entry.VolumeClaimTemplate
-		}
-		if merged.CustomParameters == nil {
-			merged.CustomParameters = entry.CustomParameters
-		}
-	}
-
-	return merged
-}
-
-// GetRoleCountsWithDefaults gets the role counts from the cluster spec and
-// fills in default values for any role counts that are 0.
-//
-// The default Storage value will be 2F + 1, where F is the cluster's fault
-// tolerance.
-//
-// The default Logs value will be 3 or 4 for three_data_hall.
-//
-// The default Proxies value will be 3.
-//
-// The default Resolvers value will be 1.
-//
-// The default RemoteLogs value will be equal to the Logs value when the
-// UsableRegions is greater than 1. It will be equal to -1 when the
-// UsableRegions is less than or equal to 1.
-//
-// The default LogRouters value will be equal to 3 times the Logs value when
-// the UsableRegions is greater than 1. It will be equal to -1 when the
-// UsableRegions is less than or equal to 1.
-func (cluster *FoundationDBCluster) GetRoleCountsWithDefaults() RoleCounts {
-	return cluster.Spec.DatabaseConfiguration.GetRoleCountsWithDefaults(
-		cluster.DesiredFaultTolerance(),
-	)
-}
-
-// calculateProcessCount determines the process count from a given role count.
-//
-// alternatives provides a list of other process counts that can fulfill this
-// role instead. If any of those process counts is positive, then this will
-// return 0.
-func (cluster *FoundationDBCluster) calculateProcessCountFromRole(
-	count int,
-	alternatives ...int,
-) int {
-	for _, value := range alternatives {
-		if value > 0 {
-			return 0
-		}
-	}
-	if count < 0 {
-		return 0
-	}
-
-	return count
-}
-
-// calculateProcessCount calculates the process count for a process class based
-// on the counts for the roles it can fulfill.
-//
-// If addFaultTolerance is true, this will add the cluster's desired fault
-// tolerance to the result.
-//
-// If the cluster is using multi-KC replication, this will divide the total
-// count across the number of KCs in the data center.
-func (cluster *FoundationDBCluster) calculateProcessCount(
-	addFaultTolerance bool,
-	counts ...int,
-) int {
-	var count = 0
-
-	if cluster.Spec.FaultDomain.ZoneIndex < 0 {
-		return -1
-	}
-
-	for _, possibleCount := range counts {
-		if possibleCount > count {
-			count = possibleCount
-		}
-	}
-	if count > 0 {
-		if addFaultTolerance {
-			count += cluster.DesiredFaultTolerance()
-		}
-		if cluster.Spec.FaultDomain.Key == "foundationdb.org/kubernetes-cluster" {
-			zoneCount := cluster.Spec.FaultDomain.ZoneCount
-			if zoneCount < 1 {
-				zoneCount = cluster.MinimumFaultDomains() + cluster.DesiredFaultTolerance()
-			}
-			overflow := count % zoneCount
-			count = count / zoneCount
-			if cluster.Spec.FaultDomain.ZoneIndex < overflow {
-				count++
-			}
-		}
-		return count
-	}
-
-	return -1
-}
-
-// GetProcessCountsWithDefaults gets the process counts from the cluster spec
-// and fills in default values for any counts that are 0. The number of storage processes
-// will only reflect the number of Pods that will be created to host storage server processes.
-// If storageServersPerPod is set the total amount of storage server processes will be
-// the storage process count multiplied by storageServersPerPod.
-func (cluster *FoundationDBCluster) GetProcessCountsWithDefaults() (ProcessCounts, error) {
-	roleCounts := cluster.GetRoleCountsWithDefaults()
-	processCounts := cluster.Spec.ProcessCounts.DeepCopy()
-
-	var isSatellite, isMain bool
-	satelliteLogs := 0
-	for _, region := range cluster.Spec.DatabaseConfiguration.Regions {
-		for _, dataCenter := range region.DataCenters {
-			if dataCenter.ID == cluster.Spec.DataCenter {
-				if dataCenter.Satellite == 0 {
-					isMain = true
-				} else {
-					isSatellite = true
-					if region.SatelliteLogs > satelliteLogs {
-						satelliteLogs = region.SatelliteLogs
-					}
-				}
-			}
-		}
-	}
-
-	if isSatellite && !isMain {
-		if processCounts.Log == 0 {
-			processCounts.Log = 1 + satelliteLogs
-			return *processCounts, nil
-		}
-	}
-
-	if processCounts.Storage == 0 {
-		processCounts.Storage = cluster.calculateProcessCount(false,
-			roleCounts.Storage)
-	}
-
-	if processCounts.Log == 0 {
-		processCounts.Log = cluster.calculateProcessCount(true,
-			cluster.calculateProcessCountFromRole(roleCounts.Logs+satelliteLogs, processCounts.Log),
-			cluster.calculateProcessCountFromRole(roleCounts.RemoteLogs, processCounts.Log),
-		)
-	}
-
-	if processCounts.Stateless == 0 {
-		primaryStatelessCount := cluster.calculateProcessCountFromRole(1, processCounts.Master) +
-			cluster.calculateProcessCountFromRole(1, processCounts.ClusterController) +
-			cluster.calculateProcessCountFromRole(roleCounts.Resolvers, processCounts.Resolution)
-		primaryStatelessCount += cluster.calculateProcessCountFromRole(
-			1,
-			processCounts.Ratekeeper,
-		) +
-			cluster.calculateProcessCountFromRole(
-				1,
-				processCounts.DataDistributor,
-			)
-
-		if cluster.Spec.DatabaseConfiguration.AreSeparatedProxiesConfigured() {
-			primaryStatelessCount += cluster.calculateProcessCountFromRole(
-				roleCounts.GrvProxies,
-				processCounts.GrvProxy,
-			)
-			primaryStatelessCount += cluster.calculateProcessCountFromRole(
-				roleCounts.CommitProxies,
-				processCounts.CommitProxy,
-			)
-		} else {
-			primaryStatelessCount += cluster.calculateProcessCountFromRole(roleCounts.Proxies, processCounts.Proxy)
-		}
-
-		processCounts.Stateless = cluster.calculateProcessCount(true,
-			primaryStatelessCount,
-			cluster.calculateProcessCountFromRole(roleCounts.LogRouters),
-		)
-	}
-
-	return *processCounts, nil
-}
-
-// DesiredFaultTolerance returns the number of replicas we should be able to
-// lose when the cluster is at full replication health.
-func (cluster *FoundationDBCluster) DesiredFaultTolerance() int {
-	return DesiredFaultTolerance(cluster.Spec.DatabaseConfiguration.RedundancyMode)
-}
-
-// MinimumFaultDomains returns the number of fault domains the cluster needs
-// to function.
-func (cluster *FoundationDBCluster) MinimumFaultDomains() int {
-	return MinimumFaultDomains(cluster.Spec.DatabaseConfiguration.RedundancyMode)
-}
-
-// DesiredCoordinatorCount returns the number of coordinators to recruit for a cluster.
-func (cluster *FoundationDBCluster) DesiredCoordinatorCount() int {
-	if cluster.Spec.DatabaseConfiguration.UsableRegions > 1 ||
-		cluster.Spec.DatabaseConfiguration.RedundancyMode == RedundancyModeThreeDataHall {
-		return 9
-	}
-
-	return cluster.MinimumFaultDomains() + cluster.DesiredFaultTolerance()
-}
-
-// CheckReconciliation compares the spec and the status to determine if
-// reconciliation is complete.
-func (cluster *FoundationDBCluster) CheckReconciliation(log logr.Logger) (bool, error) {
-	logger := log.WithValues(
-		"method",
-		"CheckReconciliation",
-		"namespace",
-		cluster.Namespace,
-		"cluster",
-		cluster.Name,
-	)
-	var reconciled = true
-	if !cluster.Status.Configured {
-		logger.Info("Pending initial database configuration", "state", "NeedsConfigurationChange")
-		cluster.Status.Generations.NeedsConfigurationChange = cluster.Generation
-		return false, nil
-	}
-
-	cluster.Status.Generations = ClusterGenerationStatus{
-		Reconciled: cluster.Status.Generations.Reconciled,
-	}
-	desiredCounts, err := cluster.GetProcessCountsWithDefaults()
-	if err != nil {
-		return false, err
-	}
-
-	currentCounts := CreateProcessCountsFromProcessGroupStatus(cluster.Status.ProcessGroups, false)
-
-	diff := desiredCounts.Diff(currentCounts)
-	for _, delta := range diff {
-		if delta > 0 {
-			cluster.Status.Generations.NeedsGrow = cluster.Generation
-			reconciled = false
-		} else if delta < 0 {
-			cluster.Status.Generations.NeedsShrink = cluster.Generation
-			reconciled = false
-		}
-	}
-
-	cluster.Status.DesiredProcessGroups = desiredCounts.Total()
-
-	for _, processGroup := range cluster.Status.ProcessGroups {
-		if processGroup.IsMarkedForRemoval() {
-			if processGroup.GetConditionTime(ResourcesTerminating) != nil {
-				logger.Info(
-					"Has process group pending to remove",
-					"processGroupID",
-					processGroup.ProcessGroupID,
-					"state",
-					"HasPendingRemoval",
-				)
-				cluster.Status.Generations.HasPendingRemoval = cluster.Generation
-			} else {
-				logger.Info("Has process group with pending shrink", "processGroupID", processGroup.ProcessGroupID, "state", "NeedsShrink", "conditions", processGroup.ProcessGroupConditions)
-				cluster.Status.Generations.NeedsShrink = cluster.Generation
-				reconciled = false
-			}
-
-			continue
-		}
-
-		if len(processGroup.ProcessGroupConditions) > 0 {
-			conditions := make(
-				[]ProcessGroupConditionType,
-				0,
-				len(processGroup.ProcessGroupConditions),
-			)
-
-			for _, condition := range processGroup.ProcessGroupConditions {
-				// The ProcessHasHighRunLoopBusy is currently only informational and shouldn't block the reconciliation.
-				if condition.ProcessGroupConditionType == ProcessHasHighRunLoopBusy {
-					logger.V(1).
-						Info("Detected process with high run loop busy value", "processGroupID", processGroup.ProcessGroupID)
-				}
-
-				// If there is at least one process with an incorrect command line, that means the operator has to restart
-				// processes.
-				if condition.ProcessGroupConditionType == IncorrectCommandLine &&
-					cluster.Status.Generations.NeedsBounce == 0 {
-					logger.V(1).
-						Info("Pending restart of fdbserver processes", "state", "NeedsBounce")
-					cluster.Status.Generations.NeedsBounce = cluster.Generation
-				}
-
-				// If there is at least one Pod with a IncorrectPodSpec condition we have to delete/recreate that Pod.
-				if condition.ProcessGroupConditionType == IncorrectPodSpec &&
-					cluster.Status.Generations.NeedsPodDeletion == 0 {
-					logger.V(1).
-						Info("Pending restart of fdbserver processes", "state", "NeedsPodDeletion")
-					cluster.Status.Generations.NeedsPodDeletion = cluster.Generation
-				}
-
-				conditions = append(conditions, condition.ProcessGroupConditionType)
-			}
-
-			if len(conditions) > 0 {
-				logger.Info(
-					"Has unhealthy process group",
-					"processGroupID",
-					processGroup.ProcessGroupID,
-					"state",
-					"HasUnhealthyProcess",
-					"conditions",
-					conditions,
-				)
-				cluster.Status.Generations.HasUnhealthyProcess = cluster.Generation
-				reconciled = false
-				continue
-			}
-		}
-
-		cluster.Status.ReconciledProcessGroups++
-	}
-
-	if cluster.Status.DesiredProcessGroups != cluster.Status.ReconciledProcessGroups {
-		logger.Info(
-			"Not all process groups are reconciled",
-			"desiredProcessGroups",
-			cluster.Status.DesiredProcessGroups,
-			"reconciledProcessGroups",
-			cluster.Status.ReconciledProcessGroups,
-		)
-		reconciled = false
-	}
-
-	if !cluster.Status.Health.Available {
-		logger.Info("Database unavailable", "state", "DatabaseUnavailable")
-		cluster.Status.Generations.DatabaseUnavailable = cluster.Generation
-		reconciled = false
-	}
-
-	desiredConfiguration := cluster.DesiredDatabaseConfiguration()
-	if !equality.Semantic.DeepEqual(cluster.Status.DatabaseConfiguration, desiredConfiguration) {
-		logger.Info(
-			"Pending database configuration change",
-			"state",
-			"NeedsConfigurationChange",
-			"current",
-			cluster.Status.DatabaseConfiguration,
-			"desired",
-			desiredConfiguration,
-		)
-		cluster.Status.Generations.NeedsConfigurationChange = cluster.Generation
-		reconciled = false
-	}
-
-	if cluster.Status.HasIncorrectConfigMap {
-		logger.Info(
-			"Pending ConfigMap (Monitor config) configuration change",
-			"state",
-			"NeedsMonitorConfUpdate",
-		)
-		cluster.Status.Generations.NeedsMonitorConfUpdate = cluster.Generation
-		reconciled = false
-	}
-
-	if cluster.Status.HasIncorrectServiceConfig {
-		logger.Info("Pending Service configuration change", "state", "NeedsServiceUpdate")
-		cluster.Status.Generations.NeedsServiceUpdate = cluster.Generation
-		reconciled = false
-	}
-
-	if cluster.Status.NeedsNewCoordinators {
-		logger.Info("Pending coordinator change", "state", "NeedsNewCoordinators")
-		cluster.Status.Generations.NeedsCoordinatorChange = cluster.Generation
-		reconciled = false
-	}
-
-	desiredAddressSet := RequiredAddressSet{}
-	if cluster.Spec.MainContainer.EnableTLS {
-		desiredAddressSet.TLS = true
-	} else {
-		desiredAddressSet.NonTLS = true
-	}
-
-	if cluster.Status.RequiredAddresses != desiredAddressSet {
-		logger.Info("Pending TLS change", "state", "HasExtraListeners")
-		cluster.Status.Generations.HasExtraListeners = cluster.Generation
-		reconciled = false
-	}
-
-	lockDenyMap := make(map[string]bool, len(cluster.Spec.LockOptions.DenyList))
-	for _, denyListEntry := range cluster.Spec.LockOptions.DenyList {
-		lockDenyMap[denyListEntry.ID] = denyListEntry.Allow
-	}
-
-	for _, denyListID := range cluster.Status.Locks.DenyList {
-		allow, present := lockDenyMap[denyListID]
-		if !present {
-			continue
-		}
-		if allow {
-			logger.Info(
-				"Pending lock acquire for configuration changes",
-				"state",
-				"NeedsLockConfigurationChanges",
-				"allowed",
-				allow,
-			)
-			cluster.Status.Generations.NeedsLockConfigurationChanges = cluster.Generation
-			reconciled = false
-		} else {
-			delete(lockDenyMap, denyListID)
-		}
-	}
-
-	for _, allow := range lockDenyMap {
-		if !allow {
-			logger.Info(
-				"Pending lock acquire for configuration changes",
-				"state",
-				"NeedsLockConfigurationChanges",
-				"allowed",
-				allow,
-			)
-			cluster.Status.Generations.NeedsLockConfigurationChanges = cluster.Generation
-			reconciled = false
-			break
-		}
-	}
-
-	if reconciled && cluster.Status.Generations.Reconciled != cluster.Generation {
-		logger.Info(
-			"Update reconciled generation",
-			"previousGeneration",
-			cluster.Status.Generations.Reconciled,
-			"currentGeneration",
-			cluster.Generation,
-		)
-		cluster.Status.Generations.Reconciled = cluster.Generation
-	}
-
-	return reconciled, nil
-}
-
-// GetDesiredServersPerPod will return the expected server per Pod for the provided process class.
-func (cluster *FoundationDBCluster) GetDesiredServersPerPod(pClass ProcessClass) int {
-	if pClass == ProcessClassStorage {
-		return cluster.GetStorageServersPerPod()
-	}
-
-	if pClass.SupportsMultipleLogServers() {
-		return cluster.GetLogServersPerPod()
-	}
-
-	return 1
-}
-
-// GetStorageServersPerPod returns the StorageServer per Pod.
-func (cluster *FoundationDBCluster) GetStorageServersPerPod() int {
-	if cluster.Spec.StorageServersPerPod <= 1 {
-		return 1
-	}
-
-	return cluster.Spec.StorageServersPerPod
-}
-
-// GetLogServersPerPod returns the TLog processes per Pod.
-func (cluster *FoundationDBCluster) GetLogServersPerPod() int {
-	if cluster.Spec.LogServersPerPod <= 1 {
-		return 1
-	}
-
-	return cluster.Spec.LogServersPerPod
-}
 
 // alphanum provides the characters that are used for the generation ID in the
 // connection string.
@@ -2117,136 +1175,6 @@ func (str *ConnectionString) GenerateNewGenerationID() error {
 	return nil
 }
 
-// GetFullAddress gets the full public address we should use for a process.
-// This will include the IP address, the port, and any additional flags.
-func (cluster *FoundationDBCluster) GetFullAddress(
-	address string,
-	processNumber int,
-) ProcessAddress {
-	addresses := cluster.GetFullAddressList(address, true, processNumber)
-	if len(addresses) < 1 {
-		return ProcessAddress{}
-	}
-
-	// First element will always be the primary
-	return addresses[0]
-}
-
-// GetFullAddressList gets the full list of public addresses we should use for a
-// process.
-//
-// This will include the IP address, the port, and any additional flags.
-//
-// If a process needs multiple addresses, this will include all of them,
-// separated by commas. If you pass false for primaryOnly, this will return only
-// the primary address.
-func (cluster *FoundationDBCluster) GetFullAddressList(
-	address string,
-	primaryOnly bool,
-	processNumber int,
-) []ProcessAddress {
-	return GetFullAddressList(
-		address,
-		primaryOnly,
-		processNumber,
-		cluster.Status.RequiredAddresses.TLS,
-		cluster.Status.RequiredAddresses.NonTLS)
-}
-
-// HasCoordinators checks whether this connection string matches a set of
-// coordinators.
-func (str *ConnectionString) HasCoordinators(coordinators []ProcessAddress) bool {
-	matchedCoordinators := make(map[string]bool, len(str.Coordinators))
-	for _, address := range str.Coordinators {
-		matchedCoordinators[address] = false
-	}
-
-	for _, pAddr := range coordinators {
-		address := pAddr.String()
-		_, matched := matchedCoordinators[address]
-		if matched {
-			matchedCoordinators[address] = true
-		} else {
-			return false
-		}
-	}
-
-	for _, matched := range matchedCoordinators {
-		if !matched {
-			return false
-		}
-	}
-
-	return true
-}
-
-// FoundationDBClusterFaultDomain describes the fault domain that a cluster is
-// replicated across.
-type FoundationDBClusterFaultDomain struct {
-	// Key provides a topology key for the fault domain to replicate across.
-	Key string `json:"key,omitempty"`
-
-	// Value provides a harcoded value to use for the zoneid for the pods.
-	Value string `json:"value,omitempty"`
-
-	// ValueFrom provides a field selector to use as the source of the fault
-	// domain.
-	ValueFrom string `json:"valueFrom,omitempty"`
-
-	// ZoneCount provides the number of fault domains in the data center where
-	// these processes are running. This is only used in the
-	// `kubernetes-cluster` fault domain strategy.
-	ZoneCount int `json:"zoneCount,omitempty"`
-
-	// ZoneIndex provides the index of this Kubernetes cluster in the list of
-	// KCs in the data center. This is only used in the `kubernetes-cluster`
-	// fault domain strategy.
-	ZoneIndex int `json:"zoneIndex,omitempty"`
-}
-
-// ContainerOverrides provides options for customizing a container created by
-// the operator.
-type ContainerOverrides struct {
-	// EnableLivenessProbe defines if the sidecar should have a livenessProbe.
-	// This setting will be ignored on the main container.
-	EnableLivenessProbe *bool `json:"enableLivenessProbe,omitempty"`
-
-	// EnableReadinessProbe defines if the sidecar should have a readinessProbe.
-	// This setting will be ignored on the main container.
-	// Deprecated: Will be removed in the next major release.
-	EnableReadinessProbe *bool `json:"enableReadinessProbe,omitempty"`
-
-	// EnableTLS controls whether we should be listening on a TLS connection.
-	EnableTLS bool `json:"enableTls,omitempty"`
-
-	// PeerVerificationRules provides the rules for what client certificates
-	// the process should accept.
-	// +kubebuilder:validation:MaxLength=10000
-	PeerVerificationRules string `json:"peerVerificationRules,omitempty"`
-
-	// ImageConfigs allows customizing the image that we use for
-	// a container.
-	// +kubebuilder:validation:MaxItems=100
-	ImageConfigs []ImageConfig `json:"imageConfigs,omitempty"`
-}
-
-// DesiredDatabaseConfiguration builds the database configuration for the
-// cluster based on its spec.
-func (cluster *FoundationDBCluster) DesiredDatabaseConfiguration() DatabaseConfiguration {
-	configuration := cluster.Spec.DatabaseConfiguration.NormalizeConfiguration(cluster)
-	configuration.RoleCounts = cluster.GetRoleCountsWithDefaults()
-	configuration.Storage = 0
-
-	if configuration.StorageEngine == StorageEngineSSD {
-		configuration.StorageEngine = StorageEngineSSD2
-	}
-	if configuration.StorageEngine == StorageEngineMemory {
-		configuration.StorageEngine = StorageEngineMemory2
-	}
-
-	return configuration
-}
-
 // ClearUnsetDatabaseConfigurationKnobs clears any knobs that are not set in the FoundationDBCluster spec
 // but which are present in the DatabaseConfiguration returned from the FoundationDBStatus.
 func (cluster *FoundationDBCluster) ClearUnsetDatabaseConfigurationKnobs(
@@ -2297,977 +1225,6 @@ func (cluster *FoundationDBCluster) ClearMissingVersionFlags(configuration *Data
 	}
 }
 
-// IsBeingUpgraded determines whether the cluster has a pending upgrade.
-func (cluster *FoundationDBCluster) IsBeingUpgraded() bool {
-	return cluster.Status.RunningVersion != "" &&
-		cluster.Status.RunningVersion != cluster.Spec.Version
-}
-
-// IsBeingUpgradedWithVersionIncompatibleVersion determines whether the cluster has a pending upgrade to a version incompatible version.
-func (cluster *FoundationDBCluster) IsBeingUpgradedWithVersionIncompatibleVersion() bool {
-	if !cluster.IsBeingUpgraded() {
-		return false
-	}
-
-	runningVersion, _ := ParseFdbVersion(cluster.Status.RunningVersion)
-	desiredVersion, _ := ParseFdbVersion(cluster.Spec.Version)
-
-	return !runningVersion.IsProtocolCompatible(desiredVersion)
-}
-
-// VersionCompatibleUpgradeInProgress returns true if the cluster is currently being upgraded and the upgrade is to
-// a version compatible version.
-func (cluster *FoundationDBCluster) VersionCompatibleUpgradeInProgress() bool {
-	if !cluster.IsBeingUpgraded() {
-		return false
-	}
-
-	runningVersion, _ := ParseFdbVersion(cluster.Status.RunningVersion)
-	desiredVersion, _ := ParseFdbVersion(cluster.Spec.Version)
-
-	return runningVersion.IsProtocolCompatible(desiredVersion)
-}
-
-// ProcessGroupIsBeingRemoved determines if an instance is pending removal.
-func (cluster *FoundationDBCluster) ProcessGroupIsBeingRemoved(processGroupID ProcessGroupID) bool {
-	if processGroupID == "" {
-		return false
-	}
-
-	for _, status := range cluster.Status.ProcessGroups {
-		if status.ProcessGroupID == processGroupID && status.IsMarkedForRemoval() {
-			return true
-		}
-	}
-
-	for _, id := range cluster.Spec.ProcessGroupsToRemove {
-		if id == processGroupID {
-			return true
-		}
-	}
-
-	for _, id := range cluster.Spec.ProcessGroupsToRemoveWithoutExclusion {
-		if id == processGroupID {
-			return true
-		}
-	}
-
-	return false
-}
-
-// ShouldUseLocks determine whether we should use locks to coordinator global
-// operations.
-func (cluster *FoundationDBCluster) ShouldUseLocks() bool {
-	disabled := cluster.Spec.LockOptions.DisableLocks
-	if disabled != nil {
-		return !*disabled
-	}
-
-	return cluster.Spec.FaultDomain.ZoneCount > 1 ||
-		len(cluster.Spec.DatabaseConfiguration.Regions) > 1 ||
-		cluster.Spec.DatabaseConfiguration.RedundancyMode == RedundancyModeThreeDataHall
-}
-
-// GetLockPrefix gets the prefix for the keys where we store locking
-// information.
-func (cluster *FoundationDBCluster) GetLockPrefix() string {
-	if cluster.Spec.LockOptions.LockKeyPrefix != "" {
-		return cluster.Spec.LockOptions.LockKeyPrefix
-	}
-
-	return "\xff\x02/org.foundationdb.kubernetes-operator"
-}
-
-// GetMaintenancePrefix returns the prefix that is used by the operator to store and read maintenance related information.
-// The prefix will be the provided GetLockPrefix appended by "maintenance".
-func (cluster *FoundationDBCluster) GetMaintenancePrefix() string {
-	return fmt.Sprintf("%s/maintenance", cluster.GetLockPrefix())
-}
-
-// GetLockDuration determines how long we hold locks for.
-func (cluster *FoundationDBCluster) GetLockDuration() time.Duration {
-	minutes := 10
-	if cluster.Spec.LockOptions.LockDurationMinutes != nil {
-		minutes = *cluster.Spec.LockOptions.LockDurationMinutes
-	}
-	return time.Duration(minutes) * time.Minute
-}
-
-// GetLockID gets the identifier for this instance of the operator when taking
-// locks. This is the `ProcessGroupIDPrefix` defined for this cluster.
-func (cluster *FoundationDBCluster) GetLockID() string {
-	return cluster.Spec.ProcessGroupIDPrefix
-}
-
-// NeedsExplicitListenAddress determines whether we pass a listen address
-// parameter to fdbserver.
-func (cluster *FoundationDBCluster) NeedsExplicitListenAddress() bool {
-	return cluster.GetPublicIPSource() == PublicIPSourceService ||
-		cluster.GetUseExplicitListenAddress()
-}
-
-// GetPublicIPSource returns the set PublicIPSource or the default PublicIPSourcePod
-func (cluster *FoundationDBCluster) GetPublicIPSource() PublicIPSource {
-	source := cluster.Spec.Routing.PublicIPSource
-	if source == nil {
-		return PublicIPSourcePod
-	}
-
-	return *source
-}
-
-// LockOptions provides customization for locking global operations.
-type LockOptions struct {
-	// DisableLocks determines whether we should disable locking entirely.
-	DisableLocks *bool `json:"disableLocks,omitempty"`
-
-	// LockKeyPrefix provides a custom prefix for the keys in the database we
-	// use to store locks.
-	LockKeyPrefix string `json:"lockKeyPrefix,omitempty"`
-
-	// LockDurationMinutes determines the duration that locks should be valid
-	// for.
-	LockDurationMinutes *int `json:"lockDurationMinutes,omitempty"`
-
-	// DenyList manages configuration for whether an instance of the operator
-	// should be denied from taking locks.
-	DenyList []LockDenyListEntry `json:"denyList,omitempty"`
-}
-
-// LockDenyListEntry models an entry in the deny list for the locking system.
-type LockDenyListEntry struct {
-	// The ID of the operator instance this entry is targeting.
-	ID string `json:"id,omitempty"`
-
-	// Whether the instance is allowed to take locks.
-	Allow bool `json:"allow,omitempty"`
-}
-
-// RoutingConfig allows configuring routing to our pods, and services that sit
-// in front of them.
-type RoutingConfig struct {
-	// Headless determines whether we want to run a headless service for the
-	// cluster.
-	HeadlessService *bool `json:"headlessService,omitempty"`
-
-	// PublicIPSource specifies what source a process should use to get its
-	// public IPs.
-	//
-	// This supports the values `pod` and `service`.
-	PublicIPSource *PublicIPSource `json:"publicIPSource,omitempty"`
-
-	// PodIPFamily tells the pod which family of IP addresses to use.
-	// You can use 4 to represent IPv4, and 6 to represent IPv6.
-	// This feature requires dual-stack support in your Kubernetes environment.
-	PodIPFamily *int `json:"podIPFamily,omitempty"`
-
-	// UseDNSInClusterFile determines whether to use DNS names rather than IP
-	// addresses to identify coordinators in the cluster file. This requires
-	// FoundationDB 7.0+.
-	UseDNSInClusterFile *bool `json:"useDNSInClusterFile,omitempty"`
-
-	// DefineDNSLocalityFields determines whether to define pod DNS names on pod
-	// specs and provide them in the locality arguments to fdbserver.
-	//
-	// This is ignored if UseDNSInCluster is true.
-	DefineDNSLocalityFields *bool `json:"defineDNSLocalityFields,omitempty"`
-
-	// DNSDomain defines the cluster domain used in a DNS name generated for a
-	// service.
-	// The default is `cluster.local`.
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	DNSDomain *string `json:"dnsDomain,omitempty"`
-}
-
-// RequiredAddressSet provides settings for which addresses we need to listen
-// on.
-type RequiredAddressSet struct {
-	// TLS defines whether we need to listen on a TLS address.
-	TLS bool `json:"tls,omitempty"`
-
-	// NonTLS defines whether we need to listen on a non-TLS address.
-	NonTLS bool `json:"nonTLS,omitempty"`
-}
-
-// CrashLoopContainerObject specifies crash-loop target for specific container.
-type CrashLoopContainerObject struct {
-	// Name of the target container.
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	ContainerName string `json:"containerName,omitempty"`
-
-	// Target processes to kill inside the container.
-	// +kubebuilder:validation:MinItems=0
-	// +kubebuilder:validation:MaxItems=10000
-	Targets []ProcessGroupID `json:"targets,omitempty"`
-}
-
-// BuggifyConfig provides options for injecting faults into a cluster for testing.
-type BuggifyConfig struct {
-	// NoSchedule defines a list of process group IDs that should fail to schedule.
-	NoSchedule []ProcessGroupID `json:"noSchedule,omitempty"`
-
-	// CrashLoops defines a list of process group IDs that should be put into a
-	// crash looping state.
-	// Deprecated: use CrashLoopContainers instead.
-	CrashLoop []ProcessGroupID `json:"crashLoop,omitempty"`
-
-	// CrashLoopContainers defines a list of process group IDs and containers
-	// that should be put into a crash looping state.
-	// +kubebuilder:validation:MinItems=0
-	// +kubebuilder:validation:MaxItems=8
-	CrashLoopContainers []CrashLoopContainerObject `json:"crashLoopContainers,omitempty"`
-
-	// EmptyMonitorConf instructs the operator to update all of the fdbmonitor.conf
-	// files to have zero fdbserver processes configured.
-	EmptyMonitorConf bool `json:"emptyMonitorConf,omitempty"`
-
-	// IgnoreDuringRestart instructs the operator to ignore the provided process groups IDs during the
-	// restart command. This can be useful to simulate cases where the kill command is not restarting all
-	// processes. IgnoreDuringRestart does not support the wildcard option to ignore all of this specific cluster processes.
-	// +kubebuilder:validation:MaxItems=1000
-	IgnoreDuringRestart []ProcessGroupID `json:"ignoreDuringRestart,omitempty"`
-
-	// BlockRemoval defines a list of process group IDs that will not be removed, even if they are marked for removal.
-	// The operator will trigger the exclusion but the removal of the resources will be blocked until they are removed
-	// from this list. This setting can be used to simulate cases where a process group is marked for removal but the
-	// resources are not yet removed.
-	// +kubebuilder:validation:MaxItems=1000
-	BlockRemoval []ProcessGroupID `json:"blockRemoval,omitempty"`
-}
-
-// LabelConfig allows customizing labels used by the operator.
-type LabelConfig struct {
-	// MatchLabels provides the labels that the operator should use to identify
-	// resources owned by the cluster. These will automatically be applied to
-	// all resources the operator creates.
-	MatchLabels map[string]string `json:"matchLabels,omitempty"`
-
-	// ResourceLabels provides additional labels that the operator should apply to
-	// resources it creates.
-	ResourceLabels map[string]string `json:"resourceLabels,omitempty"`
-
-	// ProcessGroupIDLabels provides the labels that we use for the process group ID
-	// field. The first label will be used by the operator when filtering
-	// resources.
-	// +kubebuilder:validation:MaxItems=100
-	ProcessGroupIDLabels []string `json:"processGroupIDLabels,omitempty"`
-
-	// ProcessClassLabels provides the labels that we use for the process class
-	// field. The first label will be used by the operator when filtering
-	// resources.
-	// +kubebuilder:validation:MaxItems=100
-	ProcessClassLabels []string `json:"processClassLabels,omitempty"`
-
-	// FilterOnOwnerReferences determines whether we should check that resources
-	// are owned by the cluster object, in addition to the constraints provided
-	// by the match labels.
-	// Deprecated: This setting will be removed in the next major release.
-	FilterOnOwnerReferences *bool `json:"filterOnOwnerReference,omitempty"`
-}
-
-// PublicIPSource models options for how a pod gets its public IP.
-type PublicIPSource string
-
-const (
-	// PublicIPSourcePod specifies that a pod gets its IP from the pod IP.
-	PublicIPSourcePod PublicIPSource = "pod"
-
-	// PublicIPSourceService specifies that a pod gets its IP from a service.
-	PublicIPSourceService PublicIPSource = "service"
-)
-
-// AddServersPerDisk adds serverPerDisk to the status field to keep track which ConfigMaps should be kept
-func (clusterStatus *FoundationDBClusterStatus) AddServersPerDisk(
-	serversPerDisk int,
-	pClass ProcessClass,
-) {
-	if pClass == ProcessClassStorage {
-		for _, curServersPerDisk := range clusterStatus.StorageServersPerDisk {
-			if curServersPerDisk == serversPerDisk {
-				return
-			}
-		}
-		clusterStatus.StorageServersPerDisk = append(
-			clusterStatus.StorageServersPerDisk,
-			serversPerDisk,
-		)
-		return
-	}
-
-	if pClass.SupportsMultipleLogServers() {
-		for _, curServersPerDisk := range clusterStatus.LogServersPerDisk {
-			if curServersPerDisk == serversPerDisk {
-				return
-			}
-		}
-		clusterStatus.LogServersPerDisk = append(clusterStatus.LogServersPerDisk, serversPerDisk)
-	}
-}
-
-// GetMaxConcurrentAutomaticReplacements returns the cluster setting for MaxConcurrentReplacements, defaults to 1 if unset.
-func (cluster *FoundationDBCluster) GetMaxConcurrentAutomaticReplacements() int {
-	return ptr.Deref(
-		cluster.Spec.AutomationOptions.Replacements.MaxConcurrentReplacements,
-		1,
-	)
-}
-
-// FaultDomainBasedReplacements returns true if the operator is allowed to replace all failed process groups of a
-// fault domain. Default is false
-func (cluster *FoundationDBCluster) FaultDomainBasedReplacements() bool {
-	return ptr.Deref(
-		cluster.Spec.AutomationOptions.Replacements.FaultDomainBasedReplacements,
-		false,
-	)
-}
-
-// CoordinatorSelectionSetting defines the process class and the priority of it.
-// A higher priority means that the process class is preferred over another.
-type CoordinatorSelectionSetting struct {
-	// ProcessClass defines the process class to associate with priority with.
-	ProcessClass ProcessClass `json:"processClass,omitempty"`
-	// Priority defines the ordering of different process classes.
-	Priority int `json:"priority,omitempty"`
-}
-
-// IsEligibleAsCandidate checks if the given process has the right process class to be considered a valid coordinator.
-// This method will always return false for non stateful process classes.
-func (cluster *FoundationDBCluster) IsEligibleAsCandidate(pClass ProcessClass) bool {
-	if !pClass.IsStateful() {
-		return false
-	}
-
-	if len(cluster.Spec.CoordinatorSelection) == 0 {
-		return pClass.IsStateful()
-	}
-
-	for _, setting := range cluster.Spec.CoordinatorSelection {
-		if pClass == setting.ProcessClass {
-			return true
-		}
-	}
-
-	return false
-}
-
-// GetEligibleCandidateClasses returns process classes that are eligible to become coordinators.
-func (cluster *FoundationDBCluster) GetEligibleCandidateClasses() []ProcessClass {
-	var candidateClasses []ProcessClass
-
-	for _, processGroup := range cluster.Status.ProcessGroups {
-		if cluster.IsEligibleAsCandidate(processGroup.ProcessClass) {
-			candidateClasses = append(candidateClasses, processGroup.ProcessClass)
-		}
-	}
-
-	return candidateClasses
-}
-
-// GetClassCandidatePriority returns the priority for a class. This will be used to sort the processes for coordinator selection.
-// If not setting is configured, the default will be 0.
-func (cluster *FoundationDBCluster) GetClassCandidatePriority(pClass ProcessClass) int {
-	for _, setting := range cluster.Spec.CoordinatorSelection {
-		if pClass == setting.ProcessClass {
-			return setting.Priority
-		}
-	}
-
-	// For coordinators prefer log processes over storage processes, as those get migrated anyway during an upgrade.
-	if pClass.IsLogProcess() {
-		return 1
-	}
-
-	return 0
-}
-
-// ShouldFilterOnOwnerReferences determines if we should check owner references
-// when determining if a resource is related to this cluster.
-func (cluster *FoundationDBCluster) ShouldFilterOnOwnerReferences() bool {
-	return ptr.Deref(cluster.Spec.LabelConfig.FilterOnOwnerReferences, false)
-}
-
-// SkipProcessGroup checks if a ProcessGroupStatus should be skipped during reconciliation.
-func (cluster *FoundationDBCluster) SkipProcessGroup(processGroup *ProcessGroupStatus) bool {
-	if processGroup == nil {
-		return true
-	}
-
-	pendingTime := processGroup.GetConditionTime(PodPending)
-	if pendingTime == nil {
-		return false
-	}
-
-	return time.Unix(*pendingTime, 0).Add(cluster.GetIgnorePendingPodsDuration()).Before(time.Now())
-}
-
-// GetIgnorePendingPodsDuration returns the value of IgnorePendingPodsDuration or 5 minutes if unset.
-func (cluster *FoundationDBCluster) GetIgnorePendingPodsDuration() time.Duration {
-	if cluster.Spec.AutomationOptions.IgnorePendingPodsDuration == 0 {
-		return 5 * time.Minute
-	}
-
-	return cluster.Spec.AutomationOptions.IgnorePendingPodsDuration
-}
-
-// GetIgnoreMissingProcessesSeconds returns the value of IgnoreMissingProcessesSecond or 30 seconds if unset.
-func (cluster *FoundationDBCluster) GetIgnoreMissingProcessesSeconds() time.Duration {
-	return time.Duration(
-		ptr.Deref(cluster.Spec.AutomationOptions.IgnoreMissingProcessesSeconds, 30),
-	) * time.Second
-}
-
-// GetFailedPodDuration returns the value of FailedPodDuration or 5 minutes if unset.
-func (cluster *FoundationDBCluster) GetFailedPodDuration() time.Duration {
-	return time.Duration(
-		ptr.Deref(cluster.Spec.AutomationOptions.FailedPodDurationSeconds, 300),
-	) * time.Second
-}
-
-// GetUseNonBlockingExcludes returns the value of useNonBlockingExcludes or false if unset.
-func (cluster *FoundationDBCluster) GetUseNonBlockingExcludes() bool {
-	return ptr.Deref(cluster.Spec.AutomationOptions.UseNonBlockingExcludes, false)
-}
-
-// UseLocalitiesForExclusion returns the value of UseLocalitiesForExclusion or true if unset.
-func (cluster *FoundationDBCluster) UseLocalitiesForExclusion() bool {
-	fdbVersion, err := ParseFdbVersion(cluster.GetRunningVersion())
-	if err != nil {
-		// Fall back to use exclusions with IP if we can't parse the version.
-		// This should never happen since the version is validated in earlier steps.
-		return false
-	}
-
-	return fdbVersion.SupportsLocalityBasedExclusions() &&
-		ptr.Deref(cluster.Spec.AutomationOptions.UseLocalitiesForExclusion, true)
-}
-
-// GetProcessClassLabel provides the label that this cluster is using for the
-// process class when identifying resources.
-func (cluster *FoundationDBCluster) GetProcessClassLabel() string {
-	labels := cluster.GetProcessClassLabels()
-	if len(labels) == 0 {
-		return FDBProcessClassLabel
-	}
-	return labels[0]
-}
-
-// GetProcessGroupIDLabel provides the label that this cluster is using for the
-// process group ID when identifying resources.
-func (cluster *FoundationDBCluster) GetProcessGroupIDLabel() string {
-	labels := cluster.GetProcessGroupIDLabels()
-	if len(labels) == 0 {
-		return FDBProcessGroupIDLabel
-	}
-	return labels[0]
-}
-
-// GetMaxConcurrentReplacements returns the maxConcurrentReplacements or defaults to math.MaxInt64
-func (cluster *FoundationDBCluster) GetMaxConcurrentReplacements() int {
-	return ptr.Deref(cluster.Spec.AutomationOptions.MaxConcurrentReplacements, math.MaxInt64)
-}
-
-// UseManagementAPI returns the value of UseManagementAPI or false if unset.
-func (cluster *FoundationDBCluster) UseManagementAPI() bool {
-	return ptr.Deref(cluster.Spec.AutomationOptions.UseManagementAPI, false)
-}
-
-// PodUpdateMode defines the deletion mode for the cluster
-type PodUpdateMode string
-
-const (
-	// PodUpdateModeAll deletes all process groups at once
-	PodUpdateModeAll PodUpdateMode = "All"
-	// PodUpdateModeZone deletes process groups in the same zone at the same time
-	PodUpdateModeZone PodUpdateMode = "Zone"
-	// PodUpdateModeProcessGroup deletes one process group at a time
-	PodUpdateModeProcessGroup PodUpdateMode = "ProcessGroup"
-	// PodUpdateModeNone defines that the operator is not allowed to update/delete any Pods.
-	PodUpdateModeNone PodUpdateMode = "None"
-)
-
-// NeedsHeadlessService determines whether we need to create a headless service
-// for this cluster.
-func (cluster *FoundationDBCluster) NeedsHeadlessService() bool {
-	return cluster.DefineDNSLocalityFields() ||
-		ptr.Deref(cluster.Spec.Routing.HeadlessService, false)
-}
-
-// UseDNSInClusterFile determines whether we need to use DNS entries in the cluster file for this cluster.
-func (cluster *FoundationDBCluster) UseDNSInClusterFile() bool {
-	return ptr.Deref(cluster.Spec.Routing.UseDNSInClusterFile, true)
-}
-
-// DefineDNSLocalityFields determines whether we need to put DNS entries in the
-// pod spec and process locality.
-func (cluster *FoundationDBCluster) DefineDNSLocalityFields() bool {
-	return ptr.Deref(cluster.Spec.Routing.DefineDNSLocalityFields, false) ||
-		cluster.UseDNSInClusterFile()
-}
-
-// GetDNSDomain gets the domain used when forming DNS names generated for a
-// service.
-func (cluster *FoundationDBCluster) GetDNSDomain() string {
-	return ptr.Deref(cluster.Spec.Routing.DNSDomain, "cluster.local")
-}
-
-// GetRemovalMode returns the removal mode of the cluster or default to PodUpdateModeZone if unset.
-func (cluster *FoundationDBCluster) GetRemovalMode() PodUpdateMode {
-	if cluster.Spec.AutomationOptions.RemovalMode == "" {
-		return PodUpdateModeZone
-	}
-
-	return cluster.Spec.AutomationOptions.RemovalMode
-}
-
-// GetWaitBetweenRemovalsSeconds returns the WaitDurationBetweenRemovals if set or defaults to 60s.
-func (cluster *FoundationDBCluster) GetWaitBetweenRemovalsSeconds() int {
-	duration := ptr.Deref(cluster.Spec.AutomationOptions.WaitBetweenRemovalsSeconds, -1)
-	if duration < 0 {
-		return 60
-	}
-
-	return duration
-}
-
-// UseMaintenaceMode returns true if UseMaintenanceModeChecker is set.
-func (cluster *FoundationDBCluster) UseMaintenaceMode() bool {
-	return ptr.Deref(
-		cluster.Spec.AutomationOptions.MaintenanceModeOptions.UseMaintenanceModeChecker,
-		false,
-	)
-}
-
-// ResetMaintenanceMode returns true if the operator should reset the maintenance mode once all processes in the fault domain
-// have been restarted. This method will return true if either ResetMaintenanceMode or UseMaintenaceMode is set to true.
-func (cluster *FoundationDBCluster) ResetMaintenanceMode() bool {
-	return ptr.Deref(
-		cluster.Spec.AutomationOptions.MaintenanceModeOptions.UseMaintenanceModeChecker,
-		false,
-	) ||
-		ptr.Deref(
-			cluster.Spec.AutomationOptions.MaintenanceModeOptions.ResetMaintenanceMode,
-			false,
-		)
-}
-
-// GetMaintenaceModeTimeoutSeconds returns the timeout for maintenance zone after which it will be reset.
-func (cluster *FoundationDBCluster) GetMaintenaceModeTimeoutSeconds() int {
-	return ptr.Deref(
-		cluster.Spec.AutomationOptions.MaintenanceModeOptions.MaintenanceModeTimeSeconds,
-		600,
-	)
-}
-
-// PodUpdateStrategy defines how Pod spec changes should be applied.
-type PodUpdateStrategy string
-
-const (
-	// PodUpdateStrategyReplacement replace all Pods if there is a spec change.
-	PodUpdateStrategyReplacement PodUpdateStrategy = "Replace"
-	// PodUpdateStrategyTransactionReplacement replace all transaction system Pods if there is a spec change.
-	PodUpdateStrategyTransactionReplacement PodUpdateStrategy = "ReplaceTransactionSystem"
-	// PodUpdateStrategyDelete delete all Pods if there is a spec change.
-	PodUpdateStrategyDelete PodUpdateStrategy = "Delete"
-)
-
-// NeedsReplacement returns true if the Pod should be replaced if the Pod spec has changed
-func (cluster *FoundationDBCluster) NeedsReplacement(processGroup *ProcessGroupStatus) bool {
-	if cluster.Spec.AutomationOptions.PodUpdateStrategy == PodUpdateStrategyDelete {
-		return false
-	}
-
-	if cluster.Spec.AutomationOptions.PodUpdateStrategy == PodUpdateStrategyReplacement {
-		return true
-	}
-
-	// Default is ReplaceTransactionSystem.
-	return processGroup.ProcessClass.IsTransaction()
-}
-
-// GetLogGroup returns the cluster's logGroup for use in trace logs
-func (cluster *FoundationDBCluster) GetLogGroup() string {
-	logGroup := cluster.Spec.LogGroup
-	if logGroup == "" {
-		logGroup = cluster.Name
-	}
-	return logGroup
-}
-
-// GetResourceLabels returns the resource labels for all created resources
-func (cluster *FoundationDBCluster) GetResourceLabels() map[string]string {
-	if cluster.Spec.LabelConfig.ResourceLabels != nil {
-		return cluster.Spec.LabelConfig.ResourceLabels
-	}
-
-	return map[string]string{
-		FDBClusterLabel: cluster.Name,
-	}
-}
-
-// GetProcessGroupIDLabels returns the process group ID labels
-func (cluster *FoundationDBCluster) GetProcessGroupIDLabels() []string {
-	if cluster.Spec.LabelConfig.ProcessGroupIDLabels != nil {
-		return cluster.Spec.LabelConfig.ProcessGroupIDLabels
-	}
-
-	return []string{FDBProcessGroupIDLabel}
-}
-
-// GetProcessClassLabels returns the process class labels
-func (cluster *FoundationDBCluster) GetProcessClassLabels() []string {
-	if cluster.Spec.LabelConfig.ProcessClassLabels != nil {
-		return cluster.Spec.LabelConfig.ProcessClassLabels
-	}
-
-	return []string{FDBProcessClassLabel}
-}
-
-// GetMatchLabels returns the match labels for all created resources
-func (cluster *FoundationDBCluster) GetMatchLabels() map[string]string {
-	if cluster.Spec.LabelConfig.MatchLabels != nil {
-		return cluster.Spec.LabelConfig.MatchLabels
-	}
-
-	return map[string]string{
-		FDBClusterLabel: cluster.Name,
-	}
-}
-
-// GetUseExplicitListenAddress returns the UseExplicitListenAddress or if unset the default true
-func (cluster *FoundationDBCluster) GetUseExplicitListenAddress() bool {
-	return ptr.Deref(cluster.Spec.UseExplicitListenAddress, true)
-}
-
-// GetMinimumUptimeSecondsForBounce returns the MinimumUptimeSecondsForBounce if set otherwise 600
-func (cluster *FoundationDBCluster) GetMinimumUptimeSecondsForBounce() int {
-	if cluster.Spec.MinimumUptimeSecondsForBounce == 0 {
-		return 600
-	}
-
-	return cluster.Spec.MinimumUptimeSecondsForBounce
-}
-
-// GetEnableAutomaticReplacements returns cluster.Spec.AutomationOptions.Replacements.Enabled or if unset the default true
-func (cluster *FoundationDBCluster) GetEnableAutomaticReplacements() bool {
-	return ptr.Deref(cluster.Spec.AutomationOptions.Replacements.Enabled, true)
-}
-
-// GetFailureDetectionTimeSeconds returns cluster.Spec.AutomationOptions.Replacements.FailureDetectionTimeSeconds or if unset the default 7200
-func (cluster *FoundationDBCluster) GetFailureDetectionTimeSeconds() int {
-	return ptr.Deref(
-		cluster.Spec.AutomationOptions.Replacements.FailureDetectionTimeSeconds,
-		7200,
-	)
-}
-
-// GetTaintReplacementTimeSeconds returns cluster.Spec.AutomationOptions.Replacements.TaintReplacementTimeSeconds or if unset the default 1800
-func (cluster *FoundationDBCluster) GetTaintReplacementTimeSeconds() int {
-	return ptr.Deref(
-		cluster.Spec.AutomationOptions.Replacements.TaintReplacementTimeSeconds,
-		1800,
-	)
-}
-
-// GetSidecarContainerEnableLivenessProbe returns cluster.Spec.SidecarContainer.EnableLivenessProbe or if unset the default true
-func (cluster *FoundationDBCluster) GetSidecarContainerEnableLivenessProbe() bool {
-	return ptr.Deref(cluster.Spec.SidecarContainer.EnableLivenessProbe, true)
-}
-
-// GetSidecarContainerEnableReadinessProbe returns cluster.Spec.SidecarContainer.EnableReadinessProbe or if unset the default false
-func (cluster *FoundationDBCluster) GetSidecarContainerEnableReadinessProbe() bool {
-	return ptr.Deref(cluster.Spec.SidecarContainer.EnableReadinessProbe, false)
-}
-
-// UseUnifiedImage returns true if the unified image should be used.
-func (cluster *FoundationDBCluster) UseUnifiedImage() bool {
-	if cluster.Spec.ImageType != nil {
-		return *cluster.Spec.ImageType == ImageTypeUnified
-	}
-
-	return true
-}
-
-// DesiredImageType returns the desired image type that should be used.
-func (cluster *FoundationDBCluster) DesiredImageType() ImageType {
-	if cluster.UseUnifiedImage() {
-		return ImageTypeUnified
-	}
-
-	return ImageTypeSplit
-}
-
-// GetIgnoreTerminatingPodsSeconds returns the value of IgnoreTerminatingPodsSeconds or defaults to 10 minutes.
-func (cluster *FoundationDBCluster) GetIgnoreTerminatingPodsSeconds() int {
-	return ptr.Deref(
-		cluster.Spec.AutomationOptions.IgnoreTerminatingPodsSeconds,
-		int((10 * time.Minute).Seconds()),
-	)
-}
-
-// GetProcessGroupsToRemove will return the list of Process Group IDs that must be added to the ProcessGroupsToRemove
-// it will filter out all Process Group IDs that are already marked for removal to make sure those are clean up. If a
-// provided process group ID doesn't exit it will be ignored.
-func (cluster *FoundationDBCluster) GetProcessGroupsToRemove(
-	processGroupIDs []ProcessGroupID,
-) []ProcessGroupID {
-	currentProcessGroupsToRemove := map[ProcessGroupID]None{}
-
-	for _, id := range cluster.Spec.ProcessGroupsToRemove {
-		currentProcessGroupsToRemove[id] = None{}
-	}
-
-	for _, id := range processGroupIDs {
-		currentProcessGroupsToRemove[id] = None{}
-	}
-
-	filteredProcessGroupsToRemove := make([]ProcessGroupID, 0, len(currentProcessGroupsToRemove))
-	for _, processGroup := range cluster.Status.ProcessGroups {
-		if _, ok := currentProcessGroupsToRemove[processGroup.ProcessGroupID]; !ok {
-			continue
-		}
-
-		if processGroup.IsMarkedForRemoval() {
-			continue
-		}
-
-		filteredProcessGroupsToRemove = append(
-			filteredProcessGroupsToRemove,
-			processGroup.ProcessGroupID,
-		)
-	}
-
-	return filteredProcessGroupsToRemove
-}
-
-// GetProcessGroupsToRemoveWithoutExclusion will returns the list of Process Group IDs that must be added to the ProcessGroupsToRemove
-// it will filter out all Process Group IDs that are already marked for removal and are marked as excluded to make sure those are clean up.
-// If a provided process group ID doesn't exit it will be ignored.
-func (cluster *FoundationDBCluster) GetProcessGroupsToRemoveWithoutExclusion(
-	processGroupIDs []ProcessGroupID,
-) []ProcessGroupID {
-	currentProcessGroupsToRemove := map[ProcessGroupID]None{}
-
-	for _, id := range cluster.Spec.ProcessGroupsToRemoveWithoutExclusion {
-		currentProcessGroupsToRemove[id] = None{}
-	}
-
-	for _, id := range processGroupIDs {
-		currentProcessGroupsToRemove[id] = None{}
-	}
-
-	filteredProcessGroupsToRemove := make([]ProcessGroupID, 0, len(currentProcessGroupsToRemove))
-	for _, processGroup := range cluster.Status.ProcessGroups {
-		if _, ok := currentProcessGroupsToRemove[processGroup.ProcessGroupID]; !ok {
-			continue
-		}
-
-		if processGroup.IsMarkedForRemoval() && !processGroup.ExclusionTimestamp.IsZero() {
-			continue
-		}
-
-		filteredProcessGroupsToRemove = append(
-			filteredProcessGroupsToRemove,
-			processGroup.ProcessGroupID,
-		)
-	}
-
-	return filteredProcessGroupsToRemove
-}
-
-// AddProcessGroupsToRemovalList adds the provided process group IDs to the remove list.
-// If a process group ID is already present on that list it won't be added a second time.
-// Deprecated: Use GetProcessGroupsToRemove instead and set the cluster.Spec.ProcessGroupsToRemove value to the return value.
-func (cluster *FoundationDBCluster) AddProcessGroupsToRemovalList(
-	processGroupIDs []ProcessGroupID,
-) {
-	removals := map[ProcessGroupID]None{}
-
-	for _, id := range cluster.Spec.ProcessGroupsToRemove {
-		removals[id] = None{}
-	}
-
-	for _, processGroupID := range processGroupIDs {
-		if _, ok := removals[processGroupID]; ok {
-			continue
-		}
-
-		cluster.Spec.ProcessGroupsToRemove = append(
-			cluster.Spec.ProcessGroupsToRemove,
-			processGroupID,
-		)
-	}
-}
-
-// AddProcessGroupsToNoScheduleList adds the provided process group IDs to the no-schedule list.
-// If a process group ID is already present on that list it won't be added a second time.
-func (cluster *FoundationDBCluster) AddProcessGroupsToNoScheduleList(
-	processGroupIDs []ProcessGroupID,
-) {
-	noScheduleProcesses := map[ProcessGroupID]None{}
-
-	for _, id := range cluster.Spec.Buggify.NoSchedule {
-		noScheduleProcesses[id] = None{}
-	}
-
-	for _, processGroupID := range processGroupIDs {
-		if _, ok := noScheduleProcesses[processGroupID]; ok {
-			continue
-		}
-
-		cluster.Spec.Buggify.NoSchedule = append(cluster.Spec.Buggify.NoSchedule, processGroupID)
-	}
-}
-
-// RemoveProcessGroupsFromNoScheduleList removes the provided process group IDs from the no-schedule list.
-func (cluster *FoundationDBCluster) RemoveProcessGroupsFromNoScheduleList(
-	processGroupIDs []ProcessGroupID,
-) {
-	processGroupIDsToRemove := make(map[ProcessGroupID]None)
-	for _, processGroupID := range processGroupIDs {
-		processGroupIDsToRemove[processGroupID] = None{}
-	}
-
-	idx := 0
-	for _, processGroupID := range cluster.Spec.Buggify.NoSchedule {
-		if _, ok := processGroupIDsToRemove[processGroupID]; ok {
-			continue
-		}
-		cluster.Spec.Buggify.NoSchedule[idx] = processGroupID
-		idx++
-	}
-
-	cluster.Spec.Buggify.NoSchedule = cluster.Spec.Buggify.NoSchedule[:idx]
-}
-
-// AddProcessGroupsToCrashLoopList adds the provided process group IDs to the crash-loop list.
-// If a process group ID is already present on that list or all the processes are set into crash-loop
-// it won't be added a second time.
-func (cluster *FoundationDBCluster) AddProcessGroupsToCrashLoopList(
-	processGroupIDs []ProcessGroupID,
-) {
-	crashLoop, _ := cluster.GetCrashLoopProcessGroups()
-
-	for _, processGroupID := range processGroupIDs {
-		if _, ok := crashLoop[processGroupID]; ok {
-			continue
-		}
-
-		cluster.Spec.Buggify.CrashLoop = append(cluster.Spec.Buggify.CrashLoop, processGroupID)
-	}
-}
-
-// AddProcessGroupsToCrashLoopContainerList adds the provided process group IDs to the crash-loop list.
-// If a process group ID is already present on that list it won't be added a second time.
-func (cluster *FoundationDBCluster) AddProcessGroupsToCrashLoopContainerList(
-	processGroupIDs []ProcessGroupID,
-	containerName string,
-) {
-	crashLoopProcessIDs := cluster.GetCrashLoopContainerProcessGroups()[containerName]
-
-	if len(crashLoopProcessIDs) == 0 {
-		containerObj := CrashLoopContainerObject{
-			ContainerName: containerName,
-			Targets:       processGroupIDs,
-		}
-		cluster.Spec.Buggify.CrashLoopContainers = append(
-			cluster.Spec.Buggify.CrashLoopContainers,
-			containerObj,
-		)
-		return
-	}
-
-	containerIdx := 0
-	for _, crashLoopContainerObj := range cluster.Spec.Buggify.CrashLoopContainers {
-		if containerName != crashLoopContainerObj.ContainerName {
-			containerIdx++
-			continue
-		}
-		for _, processGroupID := range processGroupIDs {
-			if _, ok := crashLoopProcessIDs[processGroupID]; ok {
-				continue
-			}
-			crashLoopContainerObj.Targets = append(crashLoopContainerObj.Targets, processGroupID)
-		}
-		cluster.Spec.Buggify.CrashLoopContainers[containerIdx] = crashLoopContainerObj
-		return
-	}
-}
-
-// RemoveProcessGroupsFromCrashLoopList removes the provided process group IDs from the crash-loop list.
-func (cluster *FoundationDBCluster) RemoveProcessGroupsFromCrashLoopList(
-	processGroupIDs []ProcessGroupID,
-) {
-	processGroupIDsToRemove := make(map[ProcessGroupID]None)
-	for _, processGroupID := range processGroupIDs {
-		processGroupIDsToRemove[processGroupID] = None{}
-	}
-
-	idx := 0
-	for _, processGroupID := range cluster.Spec.Buggify.CrashLoop {
-		if _, ok := processGroupIDsToRemove[processGroupID]; ok {
-			continue
-		}
-		cluster.Spec.Buggify.CrashLoop[idx] = processGroupID
-		idx++
-	}
-	cluster.Spec.Buggify.CrashLoop = cluster.Spec.Buggify.CrashLoop[:idx]
-}
-
-// RemoveProcessGroupsFromCrashLoopContainerList removes the provided process group IDs from the crash-loop container list.
-func (cluster *FoundationDBCluster) RemoveProcessGroupsFromCrashLoopContainerList(
-	processGroupIDs []ProcessGroupID,
-	containerName string,
-) {
-	processGroupIDsToRemove := make(map[ProcessGroupID]None)
-	for _, processGroupID := range processGroupIDs {
-		processGroupIDsToRemove[processGroupID] = None{}
-	}
-
-	crashLoopIdx := 0
-	for _, crashLoopContainerObj := range cluster.Spec.Buggify.CrashLoopContainers {
-		if containerName != crashLoopContainerObj.ContainerName {
-			crashLoopIdx++
-			continue
-		}
-		newTargets := make([]ProcessGroupID, 0)
-		for _, processGroupID := range crashLoopContainerObj.Targets {
-			if _, ok := processGroupIDsToRemove[processGroupID]; ok {
-				continue
-			}
-			newTargets = append(newTargets, processGroupID)
-		}
-		crashLoopContainerObj.Targets = newTargets
-		cluster.Spec.Buggify.CrashLoopContainers[crashLoopIdx] = crashLoopContainerObj
-		return
-	}
-}
-
-// AddProcessGroupsToRemovalWithoutExclusionList adds the provided process group IDs to the remove without exclusion list.
-// If a process group ID is already present on that list it won't be added a second time.
-// Deprecated: Use GetProcessGroupsToRemoveWithoutExclusion instead and set the cluster.Spec.ProcessGroupsToRemoveWithoutExclusion value to the return value.
-func (cluster *FoundationDBCluster) AddProcessGroupsToRemovalWithoutExclusionList(
-	processGroupIDs []ProcessGroupID,
-) {
-	removals := map[ProcessGroupID]None{}
-
-	for _, id := range cluster.Spec.ProcessGroupsToRemoveWithoutExclusion {
-		removals[id] = None{}
-	}
-
-	for _, processGroupID := range processGroupIDs {
-		if _, ok := removals[processGroupID]; ok {
-			continue
-		}
-
-		cluster.Spec.ProcessGroupsToRemoveWithoutExclusion = append(
-			cluster.Spec.ProcessGroupsToRemoveWithoutExclusion,
-			processGroupID,
-		)
-	}
-}
-
 // GetRunningVersion returns the running version of the cluster defined in the cluster status or if not defined the version
 // defined in the cluster spec.
 func (cluster *FoundationDBCluster) GetRunningVersion() string {
@@ -3281,275 +1238,47 @@ func (cluster *FoundationDBCluster) GetRunningVersion() string {
 	return versionString
 }
 
-// GetCrashLoopProcessGroups returns the process group IDs that are marked for crash looping. The second return value indicates
-// if all process group IDs in a cluster should be crash looping.
-func (cluster *FoundationDBCluster) GetCrashLoopProcessGroups() (map[ProcessGroupID]None, bool) {
-	crashLoopPods := make(map[ProcessGroupID]None, len(cluster.Spec.Buggify.CrashLoop))
-	crashLoopAll := false
-	for _, processGroupID := range cluster.Spec.Buggify.CrashLoop {
-		if processGroupID == "*" {
-			crashLoopAll = true
-		}
-		crashLoopPods[processGroupID] = None{}
-	}
-
-	return crashLoopPods, crashLoopAll
+// ShouldUseLocks determine whether we should use locks to coordinator global
+// operations.
+func (cluster *FoundationDBCluster) ShouldUseLocks() bool {
+	return false
 }
 
-// GetCrashLoopContainerProcessGroups returns the process group IDs in containers that are marked for crash looping.
-// Returns map[ContainerName](map[ProcessGroupID]None).
-func (cluster *FoundationDBCluster) GetCrashLoopContainerProcessGroups() map[string]map[ProcessGroupID]None {
-	crashLoopTargets := make(map[string]map[ProcessGroupID]None)
-	for _, target := range cluster.Spec.Buggify.CrashLoopContainers {
-		if _, ok := crashLoopTargets[target.ContainerName]; !ok {
-			crashLoopTargets[target.ContainerName] = make(map[ProcessGroupID]None)
-		}
+// GetLockPrefix gets the prefix for the keys where we store locking
+// information.
+func (cluster *FoundationDBCluster) GetLockPrefix() string {
 
-		for _, processID := range target.Targets {
-			crashLoopTargets[target.ContainerName][processID] = None{}
-		}
-	}
-	return crashLoopTargets
+	return "\xff\x02/org.foundationdb.kubernetes-operator"
 }
 
-// Validate checks if all settings in the cluster are valid, if not and error will be returned. If multiple issues are
-// found all of them will be returned in a single error.
-func (cluster *FoundationDBCluster) Validate() error {
-	var validations []string
-
-	// Check if the provided storage engine is valid for the defined FDB version.
-	version, err := ParseFdbVersion(cluster.Spec.Version)
-	if err != nil {
-		return err
-	}
-
-	if !version.IsSupported() {
-		return fmt.Errorf(
-			"version: %s is not supported, minimum supported version is: %s",
-			version.String(),
-			Versions.MinimumVersion.String(),
-		)
-	}
-
-	if !version.IsStorageEngineSupported(cluster.Spec.DatabaseConfiguration.StorageEngine) {
-		validations = append(
-			validations,
-			fmt.Sprintf(
-				"storage engine %s is not supported on version %s",
-				cluster.Spec.DatabaseConfiguration.StorageEngine,
-				cluster.Spec.Version,
-			),
-		)
-	}
-
-	// Check if all coordinator processes are stateful
-	for _, selection := range cluster.Spec.CoordinatorSelection {
-		if !selection.ProcessClass.IsStateful() {
-			validations = append(
-				validations,
-				fmt.Sprintf(
-					"%s is not a valid process class for coordinators",
-					selection.ProcessClass,
-				),
-			)
-		}
-	}
-
-	if cluster.Spec.Routing.PodIPFamily != nil {
-		ipFamily := cluster.GetPodIPFamily()
-		if ipFamily != PodIPFamilyIPv4 && ipFamily != PodIPFamilyIPv6 &&
-			ipFamily != PodIPFamilyUnset {
-			validations = append(
-				validations,
-				fmt.Sprintf("Pod IP Family %d is not valid, only 4 or 6 are allowed.", ipFamily),
-			)
-		}
-	}
-
-	currentMode := cluster.GetDatabaseInteractionMode()
-	if currentMode != DatabaseInteractionModeMgmtAPI &&
-		currentMode != DatabaseInteractionModeFdbcli {
-		validations = append(
-			validations,
-			fmt.Sprintf(
-				"database interaction mode: \"%s\" is not supported allowed values: [%s, %s].",
-				currentMode,
-				DatabaseInteractionModeFdbcli,
-				DatabaseInteractionModeMgmtAPI,
-			),
-		)
-	}
-
-	if len(validations) == 0 {
-		return nil
-	}
-
-	return errors.New(strings.Join(validations, ", "))
+// GetMaintenancePrefix returns the prefix that is used by the operator to store and read maintenance related information.
+// The prefix will be the provided GetLockPrefix appended by "maintenance".
+func (cluster *FoundationDBCluster) GetMaintenancePrefix() string {
+	return fmt.Sprintf("%s/maintenance", cluster.GetLockPrefix())
 }
 
-// IsTaintFeatureDisabled return true if operator is configured to not replace Pods tainted Nodes OR
-// if operator's TaintReplacementOptions is not set.
-func (cluster *FoundationDBCluster) IsTaintFeatureDisabled() bool {
-	return len(cluster.Spec.AutomationOptions.Replacements.TaintReplacementOptions) == 0
+// GetLockDuration determines how long we hold locks for.
+func (cluster *FoundationDBCluster) GetLockDuration() time.Duration {
+	minutes := 10
+	return time.Duration(minutes) * time.Minute
 }
 
-// GetMaxZonesWithUnavailablePods returns the maximum number of zones that can have unavailable pods.
-func (cluster *FoundationDBCluster) GetMaxZonesWithUnavailablePods() int {
-	return ptr.Deref(cluster.Spec.MaxZonesWithUnavailablePods, math.MaxInt)
+func (cluster *FoundationDBCluster) IsBeingUpgraded() bool {
+	// FIXME: Implement
+	return false
+}
+func (cluster *FoundationDBCluster) IsBeingUpgradedWithVersionIncompatibleVersion() bool {
+	// FIXME: Implement
+	return false
 }
 
-// CacheDatabaseStatusForReconciliation returns if the sub-reconcilers should use a cached machine-readable status. If
-// enabled the machine-readable status will be fetched only once per reconciliation loop and not multiple times. If the
-// value is unset the provided default value will be returned.
-func (cluster *FoundationDBCluster) CacheDatabaseStatusForReconciliation(defaultValue bool) bool {
-	return ptr.Deref(
-		cluster.Spec.AutomationOptions.CacheDatabaseStatusForReconciliation,
-		defaultValue,
-	)
+func (cluster *FoundationDBCluster) GetDatabaseInteractionMode() DatabaseInteractionMode {
+	// FIXME: Implement
+	return DatabaseInteractionModeFdbcli
 }
 
-// GetIgnoreLogGroupsForUpgrade will return the IgnoreLogGroupsForUpgrade, if the value is not set it will include the default `fdb-kubernetes-operator`
-// LogGroup.
-func (cluster *FoundationDBCluster) GetIgnoreLogGroupsForUpgrade() []LogGroup {
-	if len(cluster.Spec.AutomationOptions.IgnoreLogGroupsForUpgrade) > 0 {
-		return cluster.Spec.AutomationOptions.IgnoreLogGroupsForUpgrade
-	}
-
-	// Should we better read the FDB_NETWORK_OPTION_TRACE_LOG_GROUP env variable?
-	return []LogGroup{"fdb-kubernetes-operator"}
-}
-
-// GetCurrentProcessGroupsAndProcessCounts will return the process counts of Process Groups, that are not marked for removal based on the
-// FoundationDBClusterStatus and will return all used ProcessGroupIDs
-func (cluster *FoundationDBCluster) GetCurrentProcessGroupsAndProcessCounts() (map[ProcessClass]int, map[ProcessClass]map[int]bool, error) {
-	processCounts := make(map[ProcessClass]int)
-	processGroupIDs := make(map[ProcessClass]map[int]bool)
-
-	for _, processGroup := range cluster.Status.ProcessGroups {
-		idNum, err := processGroup.ProcessGroupID.GetIDNumber()
-		if err != nil {
-			return nil, nil, err
-		}
-
-		if len(processGroupIDs[processGroup.ProcessClass]) == 0 {
-			processGroupIDs[processGroup.ProcessClass] = map[int]bool{}
-		}
-		processGroupIDs[processGroup.ProcessClass][idNum] = true
-
-		if !processGroup.IsMarkedForRemoval() {
-			processCounts[processGroup.ProcessClass]++
-		}
-	}
-
-	return processCounts, processGroupIDs, nil
-}
-
-// GetNextRandomProcessGroupID will return a randomly picked ProcessGroupID, the ID number will be between 1 and maxProcessGroupIDNum.
-// This method makes sure that the returned ProcessGroupID is not in use and not marked to be removed.
-// Using a randomized ProcessGroupID will reduce the risk of reusing the same ProcessGroupID for different process groups, see:
-// https://github.com/FoundationDB/fdb-kubernetes-operator/v2/issues/2071
-func (cluster *FoundationDBCluster) GetNextRandomProcessGroupID(
-	processClass ProcessClass,
-	processGroupIDs map[int]bool,
-) ProcessGroupID {
-	return cluster.GetNextRandomProcessGroupIDWithExclusions(processClass, processGroupIDs, nil)
-}
-
-// GetNextRandomProcessGroupIDWithExclusions will return a randomly picked ProcessGroupID, the ID number will be between 1 and MaxProcessGroupIDNum.
-// This method makes sure that the returned ProcessGroupID is not in use and not marked to be removed and is not excluded.
-// Using a randomized ProcessGroupID will reduce the risk of reusing the same ProcessGroupID for different process groups, see:
-// https://github.com/FoundationDB/fdb-kubernetes-operator/v2/issues/2071
-func (cluster *FoundationDBCluster) GetNextRandomProcessGroupIDWithExclusions(
-	processClass ProcessClass,
-	processGroupIDs map[int]bool,
-	exclusions map[ProcessGroupID]None,
-) ProcessGroupID {
-	var processGroupID ProcessGroupID
-	for {
-		idNum := rand.Intn(MaxProcessGroupIDNum) + 1
-		// If the randomly picked id number is already is use, pick another one.
-		if _, ok := processGroupIDs[idNum]; ok {
-			continue
-		}
-
-		_, processGroupID = cluster.GetProcessGroupID(processClass, idNum)
-		if !cluster.newProcessGroupIDAllowed(processGroupID, exclusions) {
-			continue
-		}
-
-		// Add the newly picked process group ID.
-		processGroupIDs[idNum] = true
-		// The randomly picked process group is not in use and is not marked for removal, so we can use it.
-		break
-	}
-
-	return processGroupID
-}
-
-// newProcessGroupIDAllowed checks if the provided ProcessGroupID can be used and is not marked for removal or is part
-// of the excluded localities.
-func (cluster *FoundationDBCluster) newProcessGroupIDAllowed(
-	processGroupID ProcessGroupID,
-	exclusions map[ProcessGroupID]None,
-) bool {
-	// If the randomly picked process group is marked for removal, pick another one.
-	if cluster.ProcessGroupIsBeingRemoved(processGroupID) {
-		return false
-	}
-
-	// If the randomly picked process group is part of the locality based exclusions, we shouldn't pick it.
-	// See: https://github.com/FoundationDB/fdb-kubernetes-operator/v2/issues/1862
-	if _, ok := exclusions[processGroupID]; ok {
-		return false
-	}
-
-	return true
-}
-
-// GetNextProcessGroupID will return the next unused ProcessGroupID and the ID number based on the provided ProcessClass
-// and the mapping of used ProcessGroupID.
-// Deprecated: This method shouldn't be used anymore and GetNextRandomProcessGroupID is favoured.
-func (cluster *FoundationDBCluster) GetNextProcessGroupID(
-	processClass ProcessClass,
-	processGroupIDs map[int]bool,
-	idNum int,
-) (ProcessGroupID, int) {
-	var processGroupID ProcessGroupID
-
-	for idNum > 0 {
-		_, processGroupID = cluster.GetProcessGroupID(processClass, idNum)
-		if !cluster.ProcessGroupIsBeingRemoved(processGroupID) && !processGroupIDs[idNum] {
-			break
-		}
-
-		idNum++
-	}
-
-	return processGroupID, idNum
-}
-
-// GetProcessGroupID generates a ProcessGroupID for a process group.
-//
-// This will return the Pod name and the ProcessGroupID.
-func (cluster *FoundationDBCluster) GetProcessGroupID(
-	processClass ProcessClass,
-	idNum int,
-) (string, ProcessGroupID) {
-	var processGroupID ProcessGroupID
-	if cluster.Spec.ProcessGroupIDPrefix != "" {
-		processGroupID = ProcessGroupID(
-			fmt.Sprintf("%s-%s-%d", cluster.Spec.ProcessGroupIDPrefix, processClass, idNum),
-		)
-	} else {
-		processGroupID = ProcessGroupID(fmt.Sprintf("%s-%d", processClass, idNum))
-	}
-
-	return fmt.Sprintf(
-		"%s-%s-%d",
-		cluster.Name,
-		processClass.GetProcessClassForPodName(),
-		idNum,
-	), processGroupID
+func (cluster *FoundationDBCluster) GetLockID() string {
+	return "fdb-baremetal-operator"
 }
 
 var (
@@ -3561,99 +1290,193 @@ var (
 	PodIPFamilyIPv6 = 6
 )
 
-// GetPodIPFamily returns the current desired pod IP family. If no IP family is specified the value will be PodIPFamilyUnset.
 func (cluster *FoundationDBCluster) GetPodIPFamily() int {
-	return ptr.Deref(cluster.Spec.Routing.PodIPFamily, PodIPFamilyUnset)
+	return PodIPFamilyIPv4
 }
 
-// IsPodIPFamily6 determines whether the podIPFamily setting in cluster is set to use the IPv6 family.
-func (cluster *FoundationDBCluster) IsPodIPFamily6() bool {
-	return cluster.GetPodIPFamily() == PodIPFamilyIPv6
+func (cluster *FoundationDBCluster) GetLogGroup() string {
+	return "fdb-cluster"
 }
 
-// ProcessSharesDC returns true if the process's locality matches the cluster's Datacenter.
-// If there is insufficient cluster information, it will return true to avoid filtering when there is insufficient data
-func (cluster *FoundationDBCluster) ProcessSharesDC(process FoundationDBStatusProcessInfo) bool {
-	if cluster == nil || cluster.Spec.DataCenter == "" {
-		return true
-	}
-
-	if cluster.Spec.DataCenter == process.Locality[FDBLocalityDCIDKey] {
-		return true
-	}
-
-	return false
-}
-
-// GetMaxFaultDomainsWithTaintedProcessGroups returns the maximum fault domains that can hold pods on tainted nodes to still
-// allow the operator to automatically replace those pods on the tainted nodes automatically.
-func (cluster *FoundationDBCluster) GetMaxFaultDomainsWithTaintedProcessGroups(
-	faultDomainCnt int,
-) (int, error) {
-	maxAllowed, err := intstr.GetScaledValueFromIntOrPercent(
-		intstr.ValueOrDefault(
-			cluster.Spec.AutomationOptions.Replacements.MaxFaultDomainsWithTaintedProcessGroups,
-			intstr.IntOrString{Type: intstr.String, StrVal: "10%"},
-		),
-		faultDomainCnt,
-		false,
-	)
-	if err != nil {
-		return -1, err
-	}
-
-	if maxAllowed < 1 {
-		return 1, nil
-	}
-
-	return maxAllowed, nil
-}
-
-// UpdateAction defines the update action for an entry in the multi-region coordination key-space.
-type UpdateAction string
-
-const (
-	// UpdateActionAdd will add or update the provided information.
-	UpdateActionAdd UpdateAction = "add"
-	// UpdateActionDelete will remove the provided associated information.
-	UpdateActionDelete UpdateAction = "delete"
-)
-
-// SynchronizationMode defines the synchronization mode.
-// +kubebuilder:validation:MaxLength=256
-type SynchronizationMode string
-
-const (
-	// SynchronizationModeLocal defines the local synchronization mode.
-	SynchronizationModeLocal SynchronizationMode = "local"
-	// SynchronizationModeGlobal SynchronizationMode the global synchronization mode.
-	SynchronizationModeGlobal SynchronizationMode = "global"
-)
-
-// GetSynchronizationMode returns the current SynchronizationMode.
-func (cluster *FoundationDBCluster) GetSynchronizationMode() SynchronizationMode {
-	if !cluster.Status.Configured {
-		return SynchronizationModeLocal
-	}
-
-	return SynchronizationMode(
-		ptr.Deref(
-			cluster.Spec.AutomationOptions.SynchronizationMode,
-			string(SynchronizationModeLocal),
-		),
+// GetRoleCountsWithDefaults gets the role counts from the cluster spec and
+// fills in default values for any role counts that are 0.
+//
+// The default Storage value will be 2F + 1, where F is the cluster's fault
+// tolerance.
+//
+// The default Logs value will be 3 or 4 for three_data_hall.
+//
+// The default Proxies value will be 3.
+//
+// The default Resolvers value will be 1.
+//
+// The default RemoteLogs value will be equal to the Logs value when the
+// UsableRegions is greater than 1. It will be equal to -1 when the
+// UsableRegions is less than or equal to 1.
+//
+// The default LogRouters value will be equal to 3 times the Logs value when
+// the UsableRegions is greater than 1. It will be equal to -1 when the
+// UsableRegions is less than or equal to 1.
+func (cluster *FoundationDBCluster) GetRoleCountsWithDefaults() RoleCounts {
+	return cluster.Spec.DatabaseConfiguration.GetRoleCountsWithDefaults(
+		cluster.DesiredFaultTolerance(),
 	)
 }
 
-// GetDatabaseInteractionMode returns the DatabaseInteractionMode if set, otherwise will return the default interaction mode.
-func (cluster *FoundationDBCluster) GetDatabaseInteractionMode() DatabaseInteractionMode {
-	if cluster.Spec.AutomationOptions.DatabaseInteractionMode == nil {
-		return DatabaseInteractionModeFdbcli
+// calculateProcessCount determines the process count from a given role count.
+//
+// alternatives provides a list of other process counts that can fulfill this
+// role instead. If any of those process counts is positive, then this will
+// return 0.
+func (cluster *FoundationDBCluster) calculateProcessCountFromRole(
+	count int,
+	alternatives ...int,
+) int {
+	for _, value := range alternatives {
+		if value > 0 {
+			return 0
+		}
+	}
+	if count < 0 {
+		return 0
 	}
 
-	return *cluster.Spec.AutomationOptions.DatabaseInteractionMode
+	return count
 }
 
-// GetConditionsThatNeedReplacement returns the conditions that should trigger a replacement.
-func (cluster *FoundationDBCluster) GetConditionsThatNeedReplacement() map[ProcessGroupConditionType]None {
-	return defaultConditionsThatNeedReplacement
+// calculateProcessCount calculates the process count for a process class based
+// on the counts for the roles it can fulfill.
+//
+// If addFaultTolerance is true, this will add the cluster's desired fault
+// tolerance to the result.
+//
+// If the cluster is using multi-KC replication, this will divide the total
+// count across the number of KCs in the data center.
+func (cluster *FoundationDBCluster) calculateProcessCount(
+	addFaultTolerance bool,
+	counts ...int,
+) int {
+	var count = 0
+
+	for _, possibleCount := range counts {
+		if possibleCount > count {
+			count = possibleCount
+		}
+	}
+	if count > 0 {
+		if addFaultTolerance {
+			count += cluster.DesiredFaultTolerance()
+		}
+		return count
+	}
+
+	return -1
+}
+
+// GetProcessCountsWithDefaults gets the process counts from the cluster spec
+// and fills in default values for any counts that are 0. The number of storage processes
+// will only reflect the number of Pods that will be created to host storage server processes.
+// If storageServersPerPod is set the total amount of storage server processes will be
+// the storage process count multiplied by storageServersPerPod.
+func (cluster *FoundationDBCluster) GetProcessCountsWithDefaults() (ProcessCounts, error) {
+	DCID := "FIXME"
+	roleCounts := cluster.GetRoleCountsWithDefaults()
+	processCounts := cluster.Spec.DatabaseConfiguration.ProcessCounts
+
+	var isSatellite, isMain bool
+	satelliteLogs := 0
+	for _, region := range cluster.Spec.DatabaseConfiguration.Regions {
+		for _, dataCenter := range region.DataCenters {
+			if dataCenter.ID == DCID {
+				if dataCenter.Satellite == 0 {
+					isMain = true
+				} else {
+					isSatellite = true
+					if region.SatelliteLogs > satelliteLogs {
+						satelliteLogs = region.SatelliteLogs
+					}
+				}
+			}
+		}
+	}
+
+	if isSatellite && !isMain {
+		if processCounts.Log == 0 {
+			processCounts.Log = 1 + satelliteLogs
+			return processCounts, nil
+		}
+	}
+
+	if processCounts.Storage == 0 {
+		processCounts.Storage = cluster.calculateProcessCount(false,
+			roleCounts.Storage)
+	}
+
+	if processCounts.Log == 0 {
+		processCounts.Log = cluster.calculateProcessCount(true,
+			cluster.calculateProcessCountFromRole(roleCounts.Logs+satelliteLogs, processCounts.Log),
+			cluster.calculateProcessCountFromRole(roleCounts.RemoteLogs, processCounts.Log),
+		)
+	}
+
+	if processCounts.Stateless == 0 {
+		primaryStatelessCount := cluster.calculateProcessCountFromRole(1, processCounts.Master) +
+			cluster.calculateProcessCountFromRole(1, processCounts.ClusterController) +
+			cluster.calculateProcessCountFromRole(roleCounts.Resolvers, processCounts.Resolution)
+		primaryStatelessCount += cluster.calculateProcessCountFromRole(
+			1,
+			processCounts.Ratekeeper,
+		) +
+			cluster.calculateProcessCountFromRole(
+				1,
+				processCounts.DataDistributor,
+			)
+
+		if cluster.Spec.DatabaseConfiguration.AreSeparatedProxiesConfigured() {
+			primaryStatelessCount += cluster.calculateProcessCountFromRole(
+				roleCounts.GrvProxies,
+				processCounts.GrvProxy,
+			)
+			primaryStatelessCount += cluster.calculateProcessCountFromRole(
+				roleCounts.CommitProxies,
+				processCounts.CommitProxy,
+			)
+		} else {
+			primaryStatelessCount += cluster.calculateProcessCountFromRole(roleCounts.Proxies, processCounts.Proxy)
+		}
+
+		processCounts.Stateless = cluster.calculateProcessCount(true,
+			primaryStatelessCount,
+			cluster.calculateProcessCountFromRole(roleCounts.LogRouters),
+		)
+	}
+
+	return processCounts, nil
+}
+
+// DesiredFaultTolerance returns the number of replicas we should be able to
+// lose when the cluster is at full replication health.
+func (cluster *FoundationDBCluster) DesiredFaultTolerance() int {
+	return DesiredFaultTolerance(cluster.Spec.DatabaseConfiguration.RedundancyMode)
+}
+
+// MinimumFaultDomains returns the number of fault domains the cluster needs
+// to function.
+func (cluster *FoundationDBCluster) MinimumFaultDomains() int {
+	return MinimumFaultDomains(cluster.Spec.DatabaseConfiguration.RedundancyMode)
+}
+
+// DesiredCoordinatorCount returns the number of coordinators to recruit for a cluster.
+func (cluster *FoundationDBCluster) DesiredCoordinatorCount() int {
+	if cluster.Spec.DatabaseConfiguration.UsableRegions > 1 ||
+		cluster.Spec.DatabaseConfiguration.RedundancyMode == RedundancyModeThreeDataHall {
+		return 9
+	}
+
+	return cluster.MinimumFaultDomains() + cluster.DesiredFaultTolerance()
+}
+
+func (cluster *FoundationDBCluster) GetResourceLabels() map[string]string {
+	labels := map[string]string{}
+	return labels
 }

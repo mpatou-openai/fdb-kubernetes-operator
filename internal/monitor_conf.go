@@ -25,12 +25,9 @@ import (
 	"sort"
 	"strings"
 
-	corev1 "k8s.io/api/core/v1"
-
 	"k8s.io/utils/ptr"
 
 	fdbv1beta2 "github.com/FoundationDB/fdb-kubernetes-operator/v2/api/v1beta2"
-	"github.com/FoundationDB/fdb-kubernetes-operator/v2/pkg/podclient"
 	monitorapi "github.com/apple/foundationdb/fdbkubernetesmonitor/api"
 )
 
@@ -38,16 +35,12 @@ import (
 func GetStartCommand(
 	cluster *fdbv1beta2.FoundationDBCluster,
 	processClass fdbv1beta2.ProcessClass,
-	podClient podclient.FdbPodClient,
 	processNumber int,
 	processCount int,
 	imageType fdbv1beta2.ImageType,
-	currentPod *corev1.Pod,
+	currentNode *CloudNode,
 ) (string, error) {
-	substitutions, err := podClient.GetVariableSubstitutions()
-	if err != nil {
-		return "", err
-	}
+	var substitutions = map[string]string{}
 
 	return GetStartCommandWithSubstitutions(
 		cluster,
@@ -56,7 +49,7 @@ func GetStartCommand(
 		processNumber,
 		processCount,
 		imageType,
-		currentPod,
+		currentNode,
 	)
 }
 
@@ -68,7 +61,7 @@ func GetStartCommandWithSubstitutions(
 	processNumber int,
 	processCount int,
 	imageType fdbv1beta2.ImageType,
-	currentPod *corev1.Pod,
+	currentNode *CloudNode,
 ) (string, error) {
 	if substitutions == nil {
 		return "", nil
@@ -79,7 +72,7 @@ func GetStartCommandWithSubstitutions(
 		processClass,
 		processCount,
 		imageType,
-		getIPFamilyFromPodIfPresent(currentPod),
+		getIPFamilyFromNode(currentNode),
 	)
 	extractPlaceholderEnvVars(substitutions, config.Arguments)
 
@@ -116,25 +109,28 @@ func extractPlaceholderEnvVars(env map[string]string, arguments []monitorapi.Arg
 	}
 }
 
-// getIPFamilyFromPodIfPresent returns the Pod IP Family if present or nil if not present.
-func getIPFamilyFromPodIfPresent(pod *corev1.Pod) *int {
-	if pod != nil {
-		ipFamily, err := getIPFamilyFromPod(pod)
-		if err == nil {
-			return ptr.To(ipFamily)
-		}
-	}
+// getIPFamilyFromNode returns the Node IP Family if present or nil if not present.
+func getIPFamilyFromNode(node *CloudNode) *int {
+	// FIXME(mpatou): Implement me when we support cloud nodes.
 
 	return nil
+}
+
+type CloudNode struct {
+	Name          string
+	Subscription  string
+	ResourceGroup string
+	Provider      string
+	Region        string
+	Zone          string
 }
 
 // GetMonitorConf builds the monitor conf template
 func GetMonitorConf(
 	cluster *fdbv1beta2.FoundationDBCluster,
 	processClass fdbv1beta2.ProcessClass,
-	podClient podclient.FdbPodClient,
-	serversPerPod int,
-	currentPod *corev1.Pod,
+	serversPerNode int,
+	currentNode *CloudNode,
 ) (string, error) {
 	if cluster.Status.ConnectionString == "" {
 		return "", nil
@@ -146,35 +142,6 @@ func GetMonitorConf(
 		"kill_on_configuration_change = false",
 		"restart_delay = 60",
 	)
-
-	var substitutions map[string]string
-	var err error
-
-	if podClient != nil {
-		substitutions, err = podClient.GetVariableSubstitutions()
-		if err != nil {
-			return "", err
-		}
-	}
-
-	// Don't instantiate any servers if the `EmptyMonitorConf` buggify option is engaged.
-	if !cluster.Spec.Buggify.EmptyMonitorConf {
-		for i := 1; i <= serversPerPod; i++ {
-			confLines = append(confLines, fmt.Sprintf("[fdbserver.%d]", i))
-			commands, err := getMonitorConfStartCommandLines(
-				cluster,
-				processClass,
-				substitutions,
-				i,
-				serversPerPod,
-				getIPFamilyFromPodIfPresent(currentPod),
-			)
-			if err != nil {
-				return "", err
-			}
-			confLines = append(confLines, commands...)
-		}
-	}
 
 	return strings.Join(confLines, "\n"), nil
 }
@@ -251,17 +218,12 @@ func GetMonitorProcessConfiguration(
 
 	logGroup := cluster.GetLogGroup()
 
-	var zoneVariable string
-	if strings.HasPrefix(cluster.Spec.FaultDomain.ValueFrom, "$") {
-		zoneVariable = cluster.Spec.FaultDomain.ValueFrom[1:]
-	} else {
-		zoneVariable = fdbv1beta2.EnvNameZoneID
-	}
+	zoneVariable := fdbv1beta2.EnvNameZoneID
 
 	// currentPodIPFamily will reflect the current IP family of the Pod. If the Pod doesn't exist, we fall back
 	// to the default IP family defined on the cluster level.
 	currentPodIPFamily := ptr.Deref(podIPFamily, cluster.GetPodIPFamily())
-	sampleAddresses := cluster.GetFullAddressList(fdbv1beta2.EnvNamePublicIP, false, 1)
+	var sampleAddresses []fdbv1beta2.ProcessAddress
 	configuration.Arguments = append(
 		configuration.Arguments,
 		monitorapi.Argument{Value: "--cluster_file=/var/fdb/data/fdb.cluster"},
@@ -283,7 +245,7 @@ func GetMonitorProcessConfiguration(
 
 	// If the unified image is used we will always make use of the more specific data directory and add the process_id
 	// locality.
-	if processCount > 1 || cluster.UseUnifiedImage() {
+	if processCount > 1 {
 		configuration.Arguments = append(configuration.Arguments, monitorapi.Argument{
 			ArgumentType: monitorapi.ConcatenateArgumentType, Values: []monitorapi.Argument{
 				{Value: "--datadir=/var/fdb/data/"},
@@ -340,98 +302,6 @@ func GetMonitorProcessConfiguration(
 		},
 	)
 
-	if cluster.NeedsExplicitListenAddress() && cluster.Status.HasListenIPsForAllPods {
-		configuration.Arguments = append(
-			configuration.Arguments,
-			monitorapi.Argument{
-				ArgumentType: monitorapi.ConcatenateArgumentType,
-				Values: buildIPArgument(
-					"listen_address",
-					fdbv1beta2.EnvNamePodIP,
-					imageType,
-					sampleAddresses,
-					currentPodIPFamily,
-				),
-			},
-		)
-	}
-
-	if cluster.Spec.MainContainer.PeerVerificationRules != "" {
-		configuration.Arguments = append(
-			configuration.Arguments,
-			monitorapi.Argument{
-				Value: getKnobParameterWithValue(
-					"tls_verify_peers",
-					cluster.Spec.MainContainer.PeerVerificationRules,
-					false,
-				),
-			},
-		)
-	}
-
-	podSettings := cluster.GetProcessSettings(processClass)
-	var hasDCIDLocality, hasDataHallLocality bool
-	for _, argument := range podSettings.CustomParameters {
-		if strings.HasPrefix(string(argument), "locality_"+fdbv1beta2.FDBLocalityDCIDKey) {
-			hasDCIDLocality = true
-		}
-
-		if strings.HasPrefix(string(argument), "locality_"+fdbv1beta2.FDBLocalityDataHallKey) {
-			hasDataHallLocality = true
-		}
-
-		configuration.Arguments = append(configuration.Arguments, monitorapi.Argument{
-			ArgumentType: monitorapi.ConcatenateArgumentType,
-			Values: generateMonitorArgumentFromCustomParameter(
-				argument,
-				currentPodIPFamily,
-				imageType,
-			),
-		})
-	}
-
-	if cluster.Spec.DataCenter != "" && !hasDCIDLocality {
-		configuration.Arguments = append(
-			configuration.Arguments,
-			monitorapi.Argument{
-				Value: getKnobParameterWithValue(
-					fdbv1beta2.FDBLocalityDCIDKey,
-					cluster.Spec.DataCenter,
-					true,
-				),
-			},
-		)
-	}
-
-	if cluster.Spec.DataHall != "" && !hasDataHallLocality {
-		configuration.Arguments = append(
-			configuration.Arguments,
-			monitorapi.Argument{
-				Value: getKnobParameterWithValue(
-					fdbv1beta2.FDBLocalityDataHallKey,
-					cluster.Spec.DataHall,
-					true,
-				),
-			},
-		)
-	}
-
-	if cluster.DefineDNSLocalityFields() {
-		configuration.Arguments = append(
-			configuration.Arguments,
-			monitorapi.Argument{
-				ArgumentType: monitorapi.ConcatenateArgumentType,
-				Values: []monitorapi.Argument{
-					{Value: "--locality_dns_name="},
-					{
-						ArgumentType: monitorapi.EnvironmentArgumentType,
-						Source:       fdbv1beta2.EnvNameDNSName,
-					},
-				},
-			},
-		)
-	}
-
 	return configuration
 }
 
@@ -461,8 +331,8 @@ func generateMonitorArgumentFromCustomParameter(
 
 		// If a user specifies the fdbv1beta2.EnvNamePodIP or fdbv1beta2.EnvNamePublicIP environment variables in the
 		// custom parameters, e.g. to add a new locality, we should pass this as the proper type.
-		if podIPFamily != fdbv1beta2.PodIPFamilyUnset && imageType == fdbv1beta2.ImageTypeUnified &&
-			(value == fdbv1beta2.EnvNamePodIP || value == fdbv1beta2.EnvNamePublicIP) {
+		if podIPFamily != fdbv1beta2.PodIPFamilyUnset &&
+			(value == fdbv1beta2.EnvNameNodeIP || value == fdbv1beta2.EnvNamePublicIP) {
 			newArgument.ArgumentType = monitorapi.IPListArgumentType
 			newArgument.IPFamily = podIPFamily
 		}

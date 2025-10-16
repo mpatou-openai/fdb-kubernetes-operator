@@ -32,6 +32,20 @@ import (
 	"k8s.io/utils/ptr"
 )
 
+// This file contains fixtures to set up HA configurations.
+const (
+	// PrimaryID is the suffix for the primary FoundationDBCluster
+	PrimaryID = "primary"
+	// RemoteID is the suffix for the remote FoundationDBCluster
+	RemoteID = "remote"
+	// PrimarySatelliteID is the suffix for the primary satellite FoundationDBCluster
+	PrimarySatelliteID = "primary-sat"
+	// RemoteSatelliteID is the suffix for the remote satellite FoundationDBCluster
+	RemoteSatelliteID = "remote-sat"
+	// SatelliteID is the suffix for the satellite FoundationDBCluster
+	SatelliteID = "sat"
+)
+
 type cloudProvider string
 
 const (
@@ -133,7 +147,6 @@ type ClusterConfig struct {
 	// the HaFourZoneDoubleSatRF4 configuration.
 	RedundancyMode fdbv1beta2.RedundancyMode
 	// SynchronizationMode defines the fdbv1beta2.SynchronizationMode if not set the default will be \"local\"
-	SynchronizationMode fdbv1beta2.SynchronizationMode
 }
 
 // DefaultClusterConfigWithHaMode returns the default cluster configuration with the provided HA Mode.
@@ -202,10 +215,6 @@ func (config *ClusterConfig) SetDefaults(factory *Factory) {
 
 	if config.CpusPerPod == "" {
 		config.CpusPerPod = "1"
-	}
-
-	if config.SynchronizationMode == "" {
-		config.SynchronizationMode = factory.GetSynchronizationMode()
 	}
 
 	if config.UseDNS == nil {
@@ -635,7 +644,6 @@ func (config *ClusterConfig) Copy() *ClusterConfig {
 		UseUnifiedImage:            config.UseUnifiedImage,
 		MemoryPerPod:               config.MemoryPerPod,
 		CpusPerPod:                 config.CpusPerPod,
-		SynchronizationMode:        config.SynchronizationMode,
 		EnableTLS:                  config.EnableTLS,
 		Version:                    config.Version,
 		ManagementAPI:              config.ManagementAPI,

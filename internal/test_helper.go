@@ -21,53 +21,23 @@
 package internal
 
 import (
-	"context"
 	"math/rand"
-	"sort"
 	"strings"
 
 	fdbv1beta2 "github.com/FoundationDB/fdb-kubernetes-operator/v2/api/v1beta2"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	ctrlClient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // CreateDefaultCluster creates a default FoundationDBCluster for testing
 func CreateDefaultCluster() *fdbv1beta2.FoundationDBCluster {
-	imageType := fdbv1beta2.ImageTypeSplit
 	return &fdbv1beta2.FoundationDBCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "operator-test-1",
 			Namespace: "my-ns",
 		},
-		Spec: fdbv1beta2.FoundationDBClusterSpec{
-			Version: fdbv1beta2.Versions.Default.String(),
-			ProcessCounts: fdbv1beta2.ProcessCounts{
-				Storage:           4,
-				ClusterController: 1,
-			},
-			FaultDomain: fdbv1beta2.FoundationDBClusterFaultDomain{
-				Key: fdbv1beta2.NoneFaultDomainKey,
-			},
-			AutomationOptions: fdbv1beta2.FoundationDBClusterAutomationOptions{
-				Replacements: fdbv1beta2.AutomaticReplacementOptions{
-					Enabled:                     ptr.To(true),
-					FailureDetectionTimeSeconds: ptr.To(1),
-					TaintReplacementTimeSeconds: ptr.To(1),
-				},
-				WaitBetweenRemovalsSeconds: ptr.To(0),
-			},
-			MinimumUptimeSecondsForBounce: 1,
-			// TODO (johscheuer): Change this to the default one and adjust all test cases.
-			ImageType: &imageType,
-			Processes: map[fdbv1beta2.ProcessClass]fdbv1beta2.ProcessSettings{},
-		},
 		Status: fdbv1beta2.FoundationDBClusterStatus{
-			RequiredAddresses: fdbv1beta2.RequiredAddressSet{
-				NonTLS: true,
-			},
-			ProcessGroups:  make([]*fdbv1beta2.ProcessGroupStatus, 0),
 			RunningVersion: fdbv1beta2.Versions.Default.String(),
 		},
 	}
@@ -83,42 +53,6 @@ func GetEnvVars(container v1.Container) map[string]*v1.EnvVar {
 	return results
 }
 
-// CreateDefaultBackup creates a defaultFoundationDBCluster for testing
-func CreateDefaultBackup(cluster *fdbv1beta2.FoundationDBCluster) *fdbv1beta2.FoundationDBBackup {
-	agentCount := 3
-	return &fdbv1beta2.FoundationDBBackup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cluster.Name,
-			Namespace: cluster.Namespace,
-		},
-		Spec: fdbv1beta2.FoundationDBBackupSpec{
-			BackupState: fdbv1beta2.BackupStateRunning,
-			Version:     cluster.Spec.Version,
-			ClusterName: cluster.Name,
-			AgentCount:  &agentCount,
-			BlobStoreConfiguration: &fdbv1beta2.BlobStoreConfiguration{
-				AccountName: "test@test-service",
-				BackupName:  "test-backup",
-			},
-		},
-		Status: fdbv1beta2.FoundationDBBackupStatus{},
-	}
-}
-
-// GetProcessGroup is a helper method that creates a ProcessGroup based on the provided process class and id number.
-func GetProcessGroup(
-	cluster *fdbv1beta2.FoundationDBCluster,
-	processClass fdbv1beta2.ProcessClass,
-	idNum int,
-) *fdbv1beta2.ProcessGroupStatus {
-	_, processGroupID := cluster.GetProcessGroupID(processClass, idNum)
-
-	return &fdbv1beta2.ProcessGroupStatus{
-		ProcessClass:   processClass,
-		ProcessGroupID: processGroupID,
-	}
-}
-
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 // GenerateRandomString can be used to generate a random string with length n
@@ -131,78 +65,16 @@ func GenerateRandomString(n int) string {
 	return res.String()
 }
 
-// PickProcessGroups will pick a number of process groups for the specified process class.
-func PickProcessGroups(
-	cluster *fdbv1beta2.FoundationDBCluster,
-	processClass fdbv1beta2.ProcessClass,
-	count int,
-) []*fdbv1beta2.ProcessGroupStatus {
-	pickedProcessGroups := make([]*fdbv1beta2.ProcessGroupStatus, 0, count)
-
-	for _, processGroup := range cluster.Status.ProcessGroups {
-		if processGroup.ProcessClass != processClass {
-			continue
-		}
-
-		pickedProcessGroups = append(pickedProcessGroups, processGroup)
-		if len(pickedProcessGroups) >= count {
-			break
-		}
-	}
-
-	return pickedProcessGroups
-}
-
 // SetupClusterForTest will generate all required resources like Pods for test cases.
 func SetupClusterForTest(
 	cluster *fdbv1beta2.FoundationDBCluster,
 	k8sClient ctrlClient.Client,
 ) error {
-	counts, err := cluster.GetProcessCountsWithDefaults()
+
+	err := NormalizeClusterSpec(cluster)
 	if err != nil {
 		return err
 	}
-
-	err = NormalizeClusterSpec(cluster, DeprecationOptions{})
-	if err != nil {
-		return err
-	}
-
-	countMap := counts.Map()
-	processGroupIDs := map[fdbv1beta2.ProcessClass]map[int]bool{}
-	for processClass, count := range countMap {
-		if count == 0 {
-			continue
-		}
-
-		processGroupIDs[processClass] = map[int]bool{}
-		for count > 0 {
-			processGroupID := cluster.GetNextRandomProcessGroupID(
-				processClass,
-				processGroupIDs[processClass],
-			)
-			newProcessGroup := fdbv1beta2.NewProcessGroupStatus(processGroupID, processClass, nil)
-			newProcessGroup.ProcessGroupConditions = nil
-
-			pod, err := GetPod(cluster, newProcessGroup)
-			if err != nil {
-				return err
-			}
-
-			err = k8sClient.Create(context.Background(), pod)
-			if err != nil {
-				return err
-			}
-
-			newProcessGroup.Addresses = append(newProcessGroup.Addresses, pod.Status.PodIP)
-			cluster.Status.ProcessGroups = append(cluster.Status.ProcessGroups, newProcessGroup)
-			count--
-		}
-	}
-
-	sort.SliceStable(cluster.Status.ProcessGroups, func(i, j int) bool {
-		return cluster.Status.ProcessGroups[i].ProcessGroupID < cluster.Status.ProcessGroups[j].ProcessGroupID
-	})
 
 	return nil
 }

@@ -21,7 +21,6 @@
 package mock
 
 import (
-	"sort"
 	"sync"
 
 	"github.com/FoundationDB/fdb-kubernetes-operator/v2/pkg/fdbadminclient"
@@ -84,34 +83,6 @@ func (client *LockClient) GetPendingUpgrades(
 // GetDenyList retrieves the current deny list from the database.
 func (client *LockClient) GetDenyList() ([]string, error) {
 	return client.denyList, nil
-}
-
-// UpdateDenyList updates the deny list to match a list of entries.
-// This will return the complete deny list after these changes are made.
-func (client *LockClient) UpdateDenyList(locks []fdbv1beta2.LockDenyListEntry) error {
-	newDenyList := make([]string, 0, len(client.denyList)+len(locks))
-	newDenyMap := make(map[string]bool)
-	for _, id := range client.denyList {
-		allowed := false
-		for _, entry := range locks {
-			allowed = allowed || (entry.ID == id && entry.Allow)
-		}
-		if !allowed {
-			newDenyList = append(newDenyList, id)
-			newDenyMap[id] = true
-		}
-	}
-
-	for _, entry := range locks {
-		if !newDenyMap[entry.ID] && !entry.Allow {
-			newDenyList = append(newDenyList, entry.ID)
-			newDenyMap[entry.ID] = true
-		}
-	}
-
-	sort.Strings(newDenyList)
-	client.denyList = newDenyList
-	return nil
 }
 
 // ReleaseLock will release the current lock. The method will only release the lock if the current

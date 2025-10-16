@@ -219,68 +219,6 @@ func (factory *Factory) CreateFdbClusterFromSpec(
 	return cluster
 }
 
-// CreateFdbHaCluster creates a HA FDB Cluster based on the cluster config and cluster options
-func (factory *Factory) CreateFdbHaCluster(
-	config *ClusterConfig,
-) *HaFdbCluster {
-	startTime := time.Now()
-	config.SetDefaults(factory)
-
-	cluster := factory.ensureHAFdbClusterExists(config)
-
-	log.Println(
-		"FoundationDB HA cluster created (at version",
-		cluster.GetPrimary().cluster.Spec.Version,
-		") in",
-		time.Since(startTime).String(),
-	)
-
-	return cluster
-}
-
-// GetMainContainerOverrides will return the main container overrides.
-func (factory *Factory) GetMainContainerOverrides(
-	config *ClusterConfig,
-) fdbv1beta2.ContainerOverrides {
-	image := factory.GetFoundationDBImage()
-	if config.GetUseUnifiedImage() {
-		image = factory.GetUnifiedFoundationDBImage()
-	}
-
-	mainImage, tag := GetBaseImageAndTag(image)
-
-	return fdbv1beta2.ContainerOverrides{
-		EnableTLS: config.TLSEnabled(),
-		ImageConfigs: factory.options.getImageVersionConfig(
-			mainImage,
-			tag,
-			false,
-			config.DebugSymbols,
-		),
-	}
-}
-
-// GetSidecarContainerOverrides will return the sidecar container overrides. If the unified image should be used an empty
-// container override will be returned.
-func (factory *Factory) GetSidecarContainerOverrides(
-	config *ClusterConfig,
-) fdbv1beta2.ContainerOverrides {
-	image, tag := GetBaseImageAndTag(factory.GetSidecarImage())
-
-	return fdbv1beta2.ContainerOverrides{
-		EnableTLS:    config.TLSEnabled(),
-		ImageConfigs: factory.options.getImageVersionConfig(image, tag, true, config.DebugSymbols),
-	}
-}
-
-func (factory *Factory) getClusterName() string {
-	if factory.options.clusterName == "" {
-		return fmt.Sprintf("%s-%s", testSuiteName, factory.RandStringRunes(8))
-	}
-
-	return factory.options.clusterName
-}
-
 // GetDefaultStorageClass returns either the StorageClass provided by the command line or fetches the StorageClass passed on
 // the default Annotation.
 func (factory *Factory) GetDefaultStorageClass() string {
@@ -378,30 +316,10 @@ func (factory *Factory) DoesPodExist(pod corev1.Pod) (bool, error) {
 	return true, nil
 }
 
-func (factory *Factory) logClusterInfo(spec *fdbv1beta2.FoundationDBCluster) {
-	processCounts, _ := spec.GetProcessCountsWithDefaults()
-	log.Println(dashes)
-	log.Printf("process counts: %s", ToJSON(processCounts))
-	log.Println(dashes)
-
-	storagePodSpec := spec.GetProcessSettings("storage")
-	log.Printf("storage pod: %s", ToJSON(storagePodSpec))
-	log.Println(dashes)
-
-	statelessPodSpec := spec.GetProcessSettings("stateless")
-	log.Printf("stateless pod: %s", ToJSON(statelessPodSpec))
-	log.Println(dashes)
-
-	logPodSpec := spec.GetProcessSettings("log")
-	log.Printf("log pod: %s", ToJSON(logPodSpec))
-	log.Println(dashes)
-}
-
 func (factory *Factory) startFDBFromClusterSpec(
 	spec *fdbv1beta2.FoundationDBCluster,
 	config *ClusterConfig,
 ) *FdbCluster {
-	factory.logClusterInfo(spec)
 
 	fdbCluster, err := factory.ensureFdbClusterExists(spec, config)
 	gomega.Expect(err).ToNot(gomega.HaveOccurred(), "cluster was not created in the expected time")
@@ -754,24 +672,6 @@ func (factory *Factory) DumpState(fdbCluster *FdbCluster) {
 	factory.DumpStateWithLogsSince(fdbCluster, ptr.To[int64](300))
 }
 
-// DumpStateHaCluster can be used to dump the state of the HA cluster. This includes the Kubernetes custom resource
-// information as well as the operator logs and the Pod state.
-func (factory *Factory) DumpStateHaCluster(fdbCluster *HaFdbCluster) {
-	factory.DumpStateHaClusterWithLogsSince(fdbCluster, ptr.To[int64](300))
-}
-
-// DumpStateHaClusterWithLogsSince can be used to dump the state of the HA cluster. This includes the Kubernetes custom resource
-// information as well as the operator logs and the Pod state.
-// The logsSinceSeconds is used for the manager logs from the operator.
-func (factory *Factory) DumpStateHaClusterWithLogsSince(
-	fdbCluster *HaFdbCluster,
-	logsSinceSeconds *int64,
-) {
-	for _, cluster := range fdbCluster.clusters {
-		factory.DumpStateWithLogsSince(cluster, logsSinceSeconds)
-	}
-}
-
 // OperatorIsAtLeast is a helper method to check is the running operator is at least in the specified version.
 func (factory *Factory) OperatorIsAtLeast(version string) bool {
 	operatorVersion := strings.Split(factory.GetOperatorImage(), ":")[1]
@@ -927,18 +827,15 @@ func (factory *Factory) GetNodeSelector() string {
 	return factory.options.nodeSelector
 }
 
-// GetSynchronizationMode returns the desired fdbv1beta2.SynchronizationMode if unset, the default will be
-// fdbv1beta2.SynchronizationModeLocal.
-func (factory *Factory) GetSynchronizationMode() fdbv1beta2.SynchronizationMode {
-	if factory.options.synchronizationMode == "" {
-		return fdbv1beta2.SynchronizationModeLocal
-	}
-
-	return fdbv1beta2.SynchronizationMode(factory.options.synchronizationMode)
-}
-
 // GetDefaultUnavailableThreshold returns the default unavailable threshold. If the cluster is unavailable for a longer
 // period the test case will fail.
 func (factory *Factory) GetDefaultUnavailableThreshold() time.Duration {
 	return factory.options.defaultUnavailableThreshold
+}
+func (factory *Factory) getClusterName() string {
+	if factory.options.clusterName == "" {
+		return fmt.Sprintf("%s-%s", testSuiteName, factory.RandStringRunes(8))
+	}
+
+	return factory.options.clusterName
 }

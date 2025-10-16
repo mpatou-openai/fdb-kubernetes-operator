@@ -35,31 +35,9 @@ type AdminClient interface {
 	// ConfigureDatabase sets the database configuration.
 	ConfigureDatabase(configuration fdbv1beta2.DatabaseConfiguration, newDatabase bool) error
 
-	// ExcludeProcesses starts evacuating processes so that they can be removed
-	// from the database.
-	ExcludeProcesses(addresses []fdbv1beta2.ProcessAddress) error
-
-	// ExcludeProcessesWithNoWait starts evacuating processes so that they can be removed from the database. If noWait is
-	// set to true, the exclude command will not block until all data is moved away from the processes.
-	ExcludeProcessesWithNoWait(addresses []fdbv1beta2.ProcessAddress, noWait bool) error
-
-	// IncludeProcesses removes processes from the exclusion list and allows
-	// them to take on roles again.
-	IncludeProcesses(addresses []fdbv1beta2.ProcessAddress) error
-
-	// GetExclusions gets a list of the addresses currently excluded from the
-	// database.
-	GetExclusions() ([]fdbv1beta2.ProcessAddress, error)
-
-	// KillProcesses restarts processes
-	KillProcesses(addresses []fdbv1beta2.ProcessAddress) error
-
 	// KillProcessesForUpgrade restarts processes for upgrades, this will issue 2 kill commands to make sure all
 	// processes are restarted.
 	KillProcessesForUpgrade(addresses []fdbv1beta2.ProcessAddress) error
-
-	// ChangeCoordinators changes the coordinator set
-	ChangeCoordinators(addresses []fdbv1beta2.ProcessAddress) (string, error)
 
 	// VersionSupported reports whether we can support a cluster with a given
 	// version.
@@ -68,36 +46,6 @@ type AdminClient interface {
 	// GetProtocolVersion determines the protocol version that is used by a
 	// version of FDB.
 	GetProtocolVersion(version string) (string, error)
-
-	// StartBackup starts a new backup.
-	StartBackup(backup *fdbv1beta2.FoundationDBBackup) error
-
-	// StopBackup stops a backup.
-	StopBackup(backup *fdbv1beta2.FoundationDBBackup) error
-
-	// AbortBackup will abort a running backup.
-	AbortBackup(backup *fdbv1beta2.FoundationDBBackup) error
-
-	// DeleteBackup deletes all data related to a backup.
-	DeleteBackup(backup *fdbv1beta2.FoundationDBBackup) error
-
-	// PauseBackups pauses the backup.
-	PauseBackups() error
-
-	// ResumeBackups resumes the backups.
-	ResumeBackups() error
-
-	// ModifyBackup modifies the configuration of the backup.
-	ModifyBackup(backup *fdbv1beta2.FoundationDBBackup) error
-
-	// GetBackupStatus gets the status of the current backup.
-	GetBackupStatus() (*fdbv1beta2.FoundationDBLiveBackupStatus, error)
-
-	// StartRestore starts a new restore.
-	StartRestore(
-		url string,
-		fdbRestore fdbv1beta2.FoundationDBRestore,
-	) error
 
 	// GetRestoreStatus gets the status of the current restore.
 	GetRestoreStatus() (string, error)
@@ -108,12 +56,6 @@ type AdminClient interface {
 
 	// SetKnobs sets the Knobs that should be used for the commandline call.
 	SetKnobs([]string)
-
-	// SetMaintenanceZone places zone into maintenance mode.
-	SetMaintenanceZone(zone string, timeoutSeconds int) error
-
-	// ResetMaintenanceMode resets the maintenance mode.
-	ResetMaintenanceMode() error
 
 	// WithValues will update the logger used by the current AdminClient to contain the provided key value pairs. The provided
 	// arguments must be even.
@@ -141,58 +83,5 @@ type AdminClient interface {
 	// a majority of reachable coordinators, the default version from the cluster.Status.RunningVersion will be returned.
 	GetVersionFromReachableCoordinators() string
 
-	// Functionality for better multi-region coordination, see:
-	// https://github.com/FoundationDB/fdb-kubernetes-operator/blob/main/docs/design/better_coordination_multi_operator.md
-	// for more details
-
-	// UpdatePendingForRemoval updates the set of process groups that are marked for removal, an update can be either the addition or removal of a process group.
-	UpdatePendingForRemoval(map[fdbv1beta2.ProcessGroupID]fdbv1beta2.UpdateAction) error
-
-	// UpdatePendingForExclusion updates the set of process groups that should be excluded, an update can be either the addition or removal of a process group.
-	UpdatePendingForExclusion(map[fdbv1beta2.ProcessGroupID]fdbv1beta2.UpdateAction) error
-
-	// UpdatePendingForInclusion updates the set of process groups that should be included, an update can be either the addition or removal of a process group.
-	UpdatePendingForInclusion(map[fdbv1beta2.ProcessGroupID]fdbv1beta2.UpdateAction) error
-
-	// UpdatePendingForRestart updates the set of process groups that should be restarted, an update can be either the addition or removal of a process group.
-	UpdatePendingForRestart(map[fdbv1beta2.ProcessGroupID]fdbv1beta2.UpdateAction) error
-
-	// UpdateReadyForExclusion updates the set of process groups that are ready to be excluded, an update can be either the addition or removal of a process group.
-	UpdateReadyForExclusion(map[fdbv1beta2.ProcessGroupID]fdbv1beta2.UpdateAction) error
-
-	// UpdateReadyForInclusion updates the set of process groups that are ready to be included, an update can be either the addition or removal of a process group.
-	UpdateReadyForInclusion(map[fdbv1beta2.ProcessGroupID]fdbv1beta2.UpdateAction) error
-
-	// UpdateReadyForRestart updates the set of process groups that are ready to be restarted, an update can be either the addition or removal of a process group
-	UpdateReadyForRestart(map[fdbv1beta2.ProcessGroupID]fdbv1beta2.UpdateAction) error
-
-	// UpdateProcessAddresses updates the process addresses for the specified process group ID. If the provided slice is empty or nil, the entry will be deleted.
-	UpdateProcessAddresses(map[fdbv1beta2.ProcessGroupID][]string) error
-
-	// GetPendingForRemoval gets the process group IDs for all process groups that are marked for removal.
-	GetPendingForRemoval(prefix string) (map[fdbv1beta2.ProcessGroupID]time.Time, error)
-
-	// GetPendingForExclusion gets the process group IDs for all process groups that should be excluded.
-	GetPendingForExclusion(prefix string) (map[fdbv1beta2.ProcessGroupID]time.Time, error)
-
-	// GetPendingForInclusion gets the process group IDs for all the process groups that should be included.
-	GetPendingForInclusion(prefix string) (map[fdbv1beta2.ProcessGroupID]time.Time, error)
-
-	// GetPendingForRestart gets the process group IDs for all the process groups that should be restarted.
-	GetPendingForRestart(prefix string) (map[fdbv1beta2.ProcessGroupID]time.Time, error)
-
-	// GetReadyForExclusion gets the process group IDs for all the process groups that are ready to be excluded.
-	GetReadyForExclusion(prefix string) (map[fdbv1beta2.ProcessGroupID]time.Time, error)
-
-	// GetReadyForInclusion gets the process group IDs for all the process groups that are ready to be included.
-	GetReadyForInclusion(prefix string) (map[fdbv1beta2.ProcessGroupID]time.Time, error)
-
-	// GetReadyForRestart gets the process group IDs for all the process groups that are ready to be restarted.
-	GetReadyForRestart(prefix string) (map[fdbv1beta2.ProcessGroupID]time.Time, error)
-
-	// GetProcessAddresses gets the process group IDs and their associated process addresses.
-	GetProcessAddresses(prefix string) (map[fdbv1beta2.ProcessGroupID][]string, error)
-
-	// ClearReadyForRestart removes all the process group IDs for all the process groups that are ready to be restarted.
-	ClearReadyForRestart() error
+	ChangeCoordinators(newCoordinators []fdbv1beta2.ProcessAddress) (string, error)
 }

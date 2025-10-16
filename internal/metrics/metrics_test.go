@@ -21,12 +21,9 @@
 package metrics
 
 import (
-	"time"
-
 	fdbv1beta2 "github.com/FoundationDB/fdb-kubernetes-operator/v2/api/v1beta2"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var _ = Describe("metrics", func() {
@@ -34,28 +31,7 @@ var _ = Describe("metrics", func() {
 
 	BeforeEach(func() {
 		cluster = &fdbv1beta2.FoundationDBCluster{
-			Status: fdbv1beta2.FoundationDBClusterStatus{
-				ProcessGroups: []*fdbv1beta2.ProcessGroupStatus{
-					{
-						ProcessClass: fdbv1beta2.ProcessClassStorage,
-					},
-					{
-						ProcessClass: fdbv1beta2.ProcessClassLog,
-						ProcessGroupConditions: []*fdbv1beta2.ProcessGroupCondition{
-							fdbv1beta2.NewProcessGroupCondition(fdbv1beta2.MissingProcesses),
-						},
-					},
-					{
-						ProcessClass:     fdbv1beta2.ProcessClassStorage,
-						RemovalTimestamp: &metav1.Time{Time: time.Now()},
-					},
-					{
-						ProcessClass:       fdbv1beta2.ProcessClassStateless,
-						RemovalTimestamp:   &metav1.Time{Time: time.Now()},
-						ExclusionTimestamp: &metav1.Time{Time: time.Now()},
-					},
-				},
-			},
+			Status: fdbv1beta2.FoundationDBClusterStatus{},
 		}
 	})
 

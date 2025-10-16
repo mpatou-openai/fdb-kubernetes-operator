@@ -547,64 +547,6 @@ type SidecarConfig struct {
 	CopyAsPrimary bool
 }
 
-// getSidecarConfigs returns the sidecar config based on the provided imageConfigs.
-func (factory *Factory) getSidecarConfigs(imageConfigs []fdbv1beta2.ImageConfig) []SidecarConfig {
-	additionalSidecarVersions := factory.GetAdditionalSidecarVersions()
-	sidecarConfigs := make([]SidecarConfig, 0, len(additionalSidecarVersions)+1)
-	pullPolicy := factory.getImagePullPolicy()
-
-	defaultConfig := SidecarConfig{
-		Image: fdbv1beta2.SelectImageConfig(imageConfigs, factory.GetFDBVersion().String()).
-			Image(),
-		FDBVersion:      factory.GetFDBVersion(),
-		ImagePullPolicy: pullPolicy,
-		CopyAsPrimary:   true,
-	}
-
-	sidecarConfigs = append(
-		sidecarConfigs,
-		defaultConfig,
-	)
-
-	// Add all other versions that are required e.g. for major or minor upgrades.
-	for _, version := range additionalSidecarVersions {
-		// Don't add the sidecar another time if we already added a protocol compatible version.
-		if version.IsProtocolCompatible(factory.GetFDBVersion()) {
-			continue
-		}
-
-		sidecarConfig := SidecarConfig{
-			Image:           fdbv1beta2.SelectImageConfig(imageConfigs, version.String()).Image(),
-			FDBVersion:      version,
-			ImagePullPolicy: pullPolicy,
-		}
-
-		sidecarConfigs = append(
-			sidecarConfigs,
-			sidecarConfig,
-		)
-	}
-
-	return sidecarConfigs
-}
-
-// GetSidecarConfigs returns the sidecar configs. The sidecar configs can be used to template applications that will use
-// all provided sidecar versions to inject FDB client libraries.
-func (factory *Factory) GetSidecarConfigs() []SidecarConfig {
-	config := &ClusterConfig{
-		DebugSymbols:    false,
-		UseUnifiedImage: ptr.To(factory.UseUnifiedImage()),
-	}
-
-	if config.GetUseUnifiedImage() {
-		return factory.getSidecarConfigs(
-			factory.GetMainContainerOverrides(config).ImageConfigs,
-		)
-	}
-
-	return factory.getSidecarConfigs(factory.GetSidecarContainerOverrides(config).ImageConfigs)
-}
-
 //nolint:revive
 func (factory *Factory) getOperatorConfig(namespace string) *operatorConfig {
 	cpuRequests := "500m"
@@ -618,11 +560,8 @@ func (factory *Factory) getOperatorConfig(namespace string) *operatorConfig {
 	return &operatorConfig{
 		OperatorImage:           factory.GetOperatorImage(),
 		SecretName:              factory.GetSecretName(),
-		BackupSecretName:        factory.GetBackupSecretName(),
 		EncryptionKeySecretName: factory.GetEncryptionKeySecretName(),
 		Namespace:               namespace,
-		SidecarVersions:         factory.GetSidecarConfigs(),
-		ImagePullPolicy:         factory.getImagePullPolicy(),
 		CPURequests:             cpuRequests,
 		MemoryRequests:          MemoryRequests,
 		User:                    factory.options.username,

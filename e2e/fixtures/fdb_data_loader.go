@@ -303,12 +303,11 @@ type dataLoaderConfig struct {
 
 func (factory *Factory) getDataLoaderConfig(cluster *FdbCluster) *dataLoaderConfig {
 	return &dataLoaderConfig{
-		Name:            dataLoaderName,
-		Image:           factory.GetDataLoaderImage(),
-		Namespace:       cluster.Namespace(),
-		SidecarVersions: factory.GetSidecarConfigs(),
-		ClusterName:     cluster.Name(),
-		SecretName:      factory.GetSecretName(),
+		Name:        dataLoaderName,
+		Image:       factory.GetDataLoaderImage(),
+		Namespace:   cluster.Namespace(),
+		ClusterName: cluster.Name(),
+		SecretName:  factory.GetSecretName(),
 	}
 }
 

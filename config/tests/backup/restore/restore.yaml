@@ -1,8 +1,0 @@
-apiVersion: apps.foundationdb.org/v1beta2
-kind: FoundationDBRestore
-metadata:
- name: test-cluster
-spec:
- destinationClusterName: test-cluster
- blobStoreConfiguration:
-  accountName: seaweedfs@seaweedfs:8333
