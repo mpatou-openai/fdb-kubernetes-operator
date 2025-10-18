@@ -48,7 +48,7 @@ FDB cluster.
 An example manifest for the `kubectl fdbq plugin` that bootstraps a multi-region cluster, could look like this:
 
 ```yaml
-apiVersion: apps.foundationdb.org/v1beta1
+apiVersion: apps.openai.org/v1beta1
 kind: FoundationDBBaremetalCluster
 metadata:
   labels:
@@ -102,7 +102,7 @@ seedConnectionString: $connectionString # The seed connection string will be set
 For a `multi-Kubernetes` cluster the configuration could look like this:
 
 ```yaml
-apiVersion: apps.foundationdb.org/v1beta1
+apiVersion: apps.openai.org/v1beta1
 kind: FoundationDBBaremetalCluster
 metadata:
   labels:

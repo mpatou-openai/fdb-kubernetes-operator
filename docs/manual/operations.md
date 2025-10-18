@@ -25,7 +25,7 @@ This also requires that the original volume be available, which may not be possi
 As an alternative, you can replace a pod by explicitly placing it in the `processGroupsToRemove` list:
 
 ```yaml
-apiVersion: apps.foundationdb.org/v1beta2
+apiVersion: apps.openai.org/v1beta2
 kind: FoundationDBBaremetalCluster
 metadata:
   name: sample-cluster
@@ -46,7 +46,7 @@ This allows you to replace an arbitrarily large number of processes in a cluster
 To add a knob, you can change the `customParameters` in the cluster spec:
 
 ```yaml
-apiVersion: apps.foundationdb.org/v1beta2
+apiVersion: apps.openai.org/v1beta2
 kind: FoundationDBBaremetalCluster
 metadata:
   name: sample-cluster
@@ -75,7 +75,7 @@ _NOTE_:
 To upgrade a cluster, you can change the version in the cluster spec:
 
 ```yaml
-apiVersion: apps.foundationdb.org/v1beta2
+apiVersion: apps.openai.org/v1beta2
 kind: FoundationDBBaremetalCluster
 metadata:
   name: sample-cluster
@@ -89,7 +89,7 @@ Downgrades of patch versions are supported, but not for major or minor versions.
 For version upgrades from 7.1+ to another major or minor versions the client compatibility check might requires some additional configuration:
 
 ```yaml
-apiVersion: apps.foundationdb.org/v1beta2
+apiVersion: apps.openai.org/v1beta2
 kind: FoundationDBBaremetalCluster
 metadata:
   name: sample-cluster

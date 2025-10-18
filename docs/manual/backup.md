@@ -18,7 +18,7 @@ Continuous backups run indefinitely, creating snapshots at regular intervals def
 This is the default mode and provides continuous protection with point-in-time recovery capabilities.
 
 ```yaml
-apiVersion: apps.foundationdb.org/v1beta2
+apiVersion: apps.openai.org/v1beta2
 kind: FoundationDBBackup
 metadata:
   name: sample-cluster-continuous
@@ -36,7 +36,7 @@ One-time backups create a single snapshot and then stop.
 They are useful for creating point-in-time backups before major operations or for periodic archival purposes.
 
 ```yaml
-apiVersion: apps.foundationdb.org/v1beta2
+apiVersion: apps.openai.org/v1beta2
 kind: FoundationDBBackup
 metadata:
   name: sample-cluster-snapshot
@@ -60,7 +60,7 @@ This sample assumes some configuration that you will need to fill in based on th
 Those assumptions are explained in comments below.
 
 ```yaml
-apiVersion: apps.foundationdb.org/v1beta2
+apiVersion: apps.openai.org/v1beta2
 kind: FoundationDBBackup
 metadata:
   name: sample-cluster
@@ -171,7 +171,7 @@ FoundationDB supports [URL parameters](https://apple.github.io/foundationdb/back
 If you want to disable the secure connection e.g. for testing you can set the `secure_connection` to `0`:
 
 ```yaml
-apiVersion: apps.foundationdb.org/v1beta2
+apiVersion: apps.openai.org/v1beta2
 kind: FoundationDBBackup
 metadata:
   name: sample-cluster
@@ -206,7 +206,7 @@ If the operator is only started with a single go routine, this could also block 
 Example for the `cleanup` policy:
 
 ```yaml
-apiVersion: apps.foundationdb.org/v1beta2
+apiVersion: apps.openai.org/v1beta2
 kind: FoundationDBBackup
 metadata:
   name: sample-cluster
@@ -226,7 +226,7 @@ You can start a restore by creating a restore object.
 Here is an example restore, using the same account as the backup example above:
 
 ```yaml
-apiVersion: apps.foundationdb.org/v1beta2
+apiVersion: apps.openai.org/v1beta2
 kind: FoundationDBRestore
 metadata:
   name: sample-cluster
@@ -249,7 +249,7 @@ When you start the restore against a new cluster, you have to ensure that backup
 If you don't want to backup the cluster directly you can add the `backupState: Stopped` under the `BackupSpec`, this will ensure that the backup agents are created but no backup is started:
 
 ```yaml
-apiVersion: apps.foundationdb.org/v1beta2
+apiVersion: apps.openai.org/v1beta2
 kind: FoundationDBBackup
 metadata:
   name: sample-cluster

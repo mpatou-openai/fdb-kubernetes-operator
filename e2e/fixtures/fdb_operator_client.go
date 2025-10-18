@@ -89,7 +89,7 @@ rules:
   - patch
   - delete
 - apiGroups:
-  - apps.foundationdb.org
+  - apps.openai.org
   resources:
   - foundationdbbaremetalclusters
   - foundationdbbackups
@@ -110,7 +110,7 @@ rules:
   - get
   - create
 - apiGroups:
-  - apps.foundationdb.org
+  - apps.openai.org
   resources:
   - foundationdbbaremetalclusters/status
   - foundationdbbackups/status

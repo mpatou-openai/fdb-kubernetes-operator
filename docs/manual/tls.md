@@ -22,7 +22,7 @@ stringData:
   key.pem: |
     # Put your key here.
 ---
-apiVersion: apps.foundationdb.org/v1beta2
+apiVersion: apps.openai.org/v1beta2
 kind: FoundationDBBaremetalCluster
 metadata:
   name: sample-cluster
@@ -117,7 +117,7 @@ If the processes are missing the TLS environment variables, it's recommended to 
 Once the cluster is reconciled the TLS conversion can be started by enabling TLS in the main container:
 
 ```yaml
-apiVersion: apps.foundationdb.org/v1beta2
+apiVersion: apps.openai.org/v1beta2
 kind: FoundationDBBaremetalCluster
 metadata:
   name: sample-cluster

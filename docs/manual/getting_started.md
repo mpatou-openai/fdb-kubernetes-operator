@@ -9,9 +9,9 @@ When you make a change to the cluster spec, it will increment the `generation` f
 To run the operator in your environment, you need to install the controller and the CRDs:
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/FoundationDB/fdb-kubernetes-operator/main/config/crd/bases/apps.foundationdb.org_foundationdbbaremetalclusters.yaml
-kubectl apply -f https://raw.githubusercontent.com/FoundationDB/fdb-kubernetes-operator/main/config/crd/bases/apps.foundationdb.org_foundationdbbackups.yaml
-kubectl apply -f https://raw.githubusercontent.com/FoundationDB/fdb-kubernetes-operator/main/config/crd/bases/apps.foundationdb.org_foundationdbrestores.yaml
+kubectl apply -f https://raw.githubusercontent.com/FoundationDB/fdb-kubernetes-operator/main/config/crd/bases/apps.openai.org_foundationdbbaremetalclusters.yaml
+kubectl apply -f https://raw.githubusercontent.com/FoundationDB/fdb-kubernetes-operator/main/config/crd/bases/apps.openai.org_foundationdbbackups.yaml
+kubectl apply -f https://raw.githubusercontent.com/FoundationDB/fdb-kubernetes-operator/main/config/crd/bases/apps.openai.org_foundationdbrestores.yaml
 kubectl apply -f https://raw.githubusercontent.com/foundationdb/fdb-kubernetes-operator/main/config/samples/deployment.yaml
 ```
 
@@ -28,7 +28,7 @@ For more information on version compatibility, see our [compatibility guide](/do
 To start with, we are going to be creating a cluster with the following configuration:
 
 ```yaml
-apiVersion: apps.foundationdb.org/v1beta2
+apiVersion: apps.openai.org/v1beta2
 kind: FoundationDBBaremetalCluster
 metadata:
   name: sample-cluster

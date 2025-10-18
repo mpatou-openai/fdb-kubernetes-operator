@@ -113,7 +113,7 @@ The initial deployment would be split into three phases:
 The initial cluster spec could look like this:
 
 ```yaml
-apiVersion: apps.foundationdb.org/v1beta1
+apiVersion: apps.openai.org/v1beta1
 kind: FoundationDBBaremetalCluster
 metadata:
   labels:
@@ -133,7 +133,7 @@ With this configuration we will use the default fault domain the Kubernetes node
 When the cluster is reconciled we can create the `FoundationDBBaremetalCluster` spec in the other two Kubernetes clusters and set the `redundancy_mode: "three_data_hall"`:
 
 ```yaml
-apiVersion: apps.foundationdb.org/v1beta1
+apiVersion: apps.openai.org/v1beta1
 kind: FoundationDBBaremetalCluster
 metadata:
   labels:

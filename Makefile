@@ -1,7 +1,7 @@
 .DEFAULT_GOAL=all
 
 # Image URL to use all building/pushing image targets
-IMG ?= fdb-kubernetes-operator:latest
+IMG ?= fdb-baremetal-operator:latest
 SIDECAR_IMG ?=
 REMOTE_BUILD ?= 0
 CRD_OPTIONS ?= "crd:maxDescLen=0,crdVersions=v1,generateEmbeddedObjectMeta=true"
@@ -67,7 +67,7 @@ $(eval $(call godep,goimports,GO_IMPORTS))
 GO_SRC=$(shell find . -name "*.go" -not -name "zz_generated.*.go" -not -name ".\#*.go")
 GENERATED_GO=api/v1beta2/zz_generated.deepcopy.go
 GO_ALL=${GO_SRC} ${GENERATED_GO}
-MANIFESTS=config/crd/bases/apps.foundationdb.org_foundationdbbackups.yaml config/crd/bases/apps.foundationdb.org_foundationdbbaremetalclusters.yaml config/crd/bases/apps.foundationdb.org_foundationdbrestores.yaml
+MANIFESTS=config/crd/bases/apps.openai.org_foundationdbbaremetalclusters.yaml
 SAMPLES=config/samples/deployment.yaml config/samples/cluster.yaml config/samples/backup.yaml config/samples/restore.yaml config/samples/client.yaml
 
 ifeq "$(TEST_RACE_CONDITIONS)" "1"
@@ -131,10 +131,7 @@ uninstall: $(KUSTOMIZE) manifests
 # variables.
 config/development/kustomization.yaml: $(KUSTOMIZE) config/development/kustomization.yaml.sample
 	cp config/development/kustomization.yaml.sample config/development/kustomization.yaml
-	cd config/development && $(KUSTOMIZE) edit set image foundationdb/fdb-kubernetes-operator=${IMG}
-ifneq "$(SIDECAR_IMG)" ""
-	cd config/development && $(KUSTOMIZE) edit set image foundationdb/foundationdb-kubernetes-sidecar=${SIDECAR_IMG}
-endif
+	cd config/development && $(KUSTOMIZE) edit set image openai/fdb-baremetal-operator=${IMG}
 ifeq "$(REMOTE_BUILD)" "1"
 	cd config/development && $(KUSTOMIZE) edit add patch --path=remote_build.yaml
 endif
