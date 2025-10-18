@@ -24,15 +24,16 @@ import (
 	"context"
 	"time"
 
+	fdbv1beta2 "github.com/FoundationDB/fdb-kubernetes-operator/v2/api/v1beta2"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-
-	fdbv1beta2 "github.com/FoundationDB/fdb-kubernetes-operator/v2/api/v1beta2"
 )
 
 // SimulationOptions are used to define how the cluster reconciler should behave in the unit tests.
@@ -52,6 +53,7 @@ type FoundationDBClusterReconciler struct {
 	Log               logr.Logger
 	SimulationOptions SimulationOptions
 	Recorder          record.EventRecorder
+	Namespace         string
 }
 
 // NewFoundationDBClusterReconciler constructs a reconciler instance.
@@ -61,7 +63,33 @@ func NewFoundationDBClusterReconciler() *FoundationDBClusterReconciler {
 
 // Reconcile currently contains placeholder logic for the bare-metal operator.
 func (r *FoundationDBClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.Log.Info("Reconciling FoundationDBCluster", "name", req.NamespacedName)
+	cluster := &fdbv1beta2.FoundationDBCluster{}
+
+	err := r.Get(ctx, req.NamespacedName, cluster)
+	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			return ctrl.Result{}, nil
+		}
+		// Error reading the object - requeue the request.
+		return ctrl.Result{}, err
+	}
+
+	clusterLog := globalControllerLogger.WithValues(
+		"namespace",
+		cluster.Namespace,
+		"cluster",
+		cluster.Name,
+		"traceID",
+		uuid.NewUUID(),
+	)
+	startTime := time.Now()
+	defer func() {
+		clusterLog.Info(
+			"Reconciliation run finished",
+			"duration_seconds",
+			time.Since(startTime).Seconds(),
+		)
+	}()
 	return ctrl.Result{}, nil
 }
 

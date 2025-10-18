@@ -62,7 +62,7 @@ type Options struct {
 	LogFilePermission               string
 	ClusterLabelKeyForNodeTrigger   string
 	HealthProbeBindAddress          string
-	PodUpdateMethod                 string
+	WatchNamespace                  string
 	CliTimeout                      int
 	MaxCliTimeout                   int
 	MaxConcurrentReconciles         int
@@ -244,6 +244,12 @@ func (o *Options) BindFlags(fs *flag.FlagSet) {
 		math.MaxFloat64,
 		"Defines the threshold when a process will be considered to have a high run loop busy value. The value will be between 0.0 and 1.0. Setting it to a higher value will disable the high run loop busy check.",
 	)
+	fs.StringVar(
+		&o.WatchNamespace,
+		"watch-namespace",
+		os.Getenv("WATCH_NAMESPACE"),
+		"Defines which namespace the operator should watch.",
+	)
 }
 
 // StartManager will start the FoundationDB operator manager.
@@ -284,6 +290,18 @@ func StartManager(
 	fdbclient.MaxCliTimeout = time.Duration(operatorOpts.MaxCliTimeout) * time.Second
 
 	cacheOptions := cache.Options{}
+	if operatorOpts.WatchNamespace != "" {
+		setupLog.Info(
+			"Operator starting in single namespace mode",
+			"namespace",
+			operatorOpts.WatchNamespace,
+		)
+		cacheOptions.DefaultNamespaces = map[string]cache.Config{
+			operatorOpts.WatchNamespace: {},
+		}
+	} else {
+		setupLog.Info("Operator starting in Global mode")
+	}
 
 	options := ctrl.Options{
 		Scheme: scheme,
@@ -313,6 +331,7 @@ func StartManager(
 
 		clusterReconciler.Log = logr.WithName("controllers").WithName("FoundationDBBaremetalCluster")
 		clusterReconciler.Scheme = mgr.GetScheme()
+		clusterReconciler.Namespace = operatorOpts.WatchNamespace
 
 		if err := clusterReconciler.SetupWithManager(mgr, operatorOpts.MaxConcurrentReconciles); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FoundationDBCluster")
