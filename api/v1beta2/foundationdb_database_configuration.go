@@ -194,7 +194,7 @@ func (configuration *DatabaseConfiguration) FailOver() DatabaseConfiguration {
 // This will fill in defaults of -1 for some fields that have a default of 0,
 // and will ensure that the region configuration is ordered consistently.
 func (configuration DatabaseConfiguration) NormalizeConfiguration(
-	cluster *FoundationDBCluster,
+	cluster *FoundationDBBaremetalCluster,
 ) DatabaseConfiguration {
 	result := configuration.DeepCopy()
 

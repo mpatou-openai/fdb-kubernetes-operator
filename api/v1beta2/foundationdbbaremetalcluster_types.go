@@ -33,30 +33,30 @@ import (
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:shortName=bmfdb
 // +kubebuilder:subresource:status
-// +kubebuilder:metadata:annotations="foundationdb.org/release=v2.15.0"
+// +kubebuilder:metadata:annotations="openai.org/release=v0.0.1"
 // +kubebuilder:printcolumn:name="Version",type="string",JSONPath=".status.runningVersion",description="Running version",priority=0
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 // +kubebuilder:storageversion
 
-// FoundationDBCluster is the Schema for the foundationdbclusters API
-type FoundationDBCluster struct {
+// FoundationDBBaremetalCluster is the Schema for the foundationdbbaremetalclusters API
+type FoundationDBBaremetalCluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   FoundationDBClusterSpec   `json:"spec,omitempty"`
-	Status FoundationDBClusterStatus `json:"status,omitempty"`
+	Spec   FoundationDBBaremetalClusterSpec   `json:"spec,omitempty"`
+	Status FoundationDBBaremetalClusterStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
-// FoundationDBClusterList contains a list of FoundationDBCluster objects
-type FoundationDBClusterList struct {
+// FoundationDBBaremetalClusterList contains a list of FoundationDBBaremetalCluster objects
+type FoundationDBBaremetalClusterList struct {
 	metav1.TypeMeta `                      json:",inline"`
 	metav1.ListMeta `                      json:"metadata,omitempty"`
-	Items           []FoundationDBCluster `json:"items"`
+	Items           []FoundationDBBaremetalCluster `json:"items"`
 }
 
-// TODO (johscheuer): I think it would make sense to expose this as a setting in the FoundationDBCluster automation options
+// TODO (johscheuer): I think it would make sense to expose this as a setting in the FoundationDBBaremetalCluster automation options
 // that way users can define what conditions should be used for the replacement logic.
 var defaultConditionsThatNeedReplacement = map[ProcessGroupConditionType]None{
 	MissingProcesses:          {},
@@ -83,11 +83,11 @@ var (
 )
 
 func init() {
-	SchemeBuilder.Register(&FoundationDBCluster{}, &FoundationDBClusterList{})
+	SchemeBuilder.Register(&FoundationDBBaremetalCluster{}, &FoundationDBBaremetalClusterList{})
 }
 
-// FoundationDBClusterSpec defines the desired state of a cluster.
-type FoundationDBClusterSpec struct {
+// FoundationDBBaremetalClusterSpec defines the desired state of a cluster.
+type FoundationDBBaremetalClusterSpec struct {
 	// Version defines the version of FoundationDB the cluster should run.
 	// +kubebuilder:validation:Pattern:=(\d+)\.(\d+)\.(\d+)
 	Version string `json:"version"`
@@ -108,8 +108,8 @@ const (
 	ImageTypeUnified ImageType = "unified"
 )
 
-// FoundationDBClusterStatus defines the observed state of FoundationDBCluster
-type FoundationDBClusterStatus struct {
+// FoundationDBBaremetalClusterStatus defines the observed state of FoundationDBBaremetalCluster
+type FoundationDBBaremetalClusterStatus struct {
 	// DatabaseConfiguration provides the running configuration of the database.
 	DatabaseConfiguration DatabaseConfiguration `json:"databaseConfiguration,omitempty"`
 
@@ -314,7 +314,7 @@ func (processGroupStatus *ProcessGroupStatus) MarkForRemoval() {
 }
 
 // GetPodName returns the Pod name for the associated Process Group.
-func (processGroupStatus *ProcessGroupStatus) GetPodName(cluster *FoundationDBCluster) string {
+func (processGroupStatus *ProcessGroupStatus) GetPodName(cluster *FoundationDBBaremetalCluster) string {
 	var sb strings.Builder
 	sb.WriteString(cluster.Name)
 	sb.WriteString("-")
@@ -334,7 +334,7 @@ func (processGroupStatus *ProcessGroupStatus) GetPodName(cluster *FoundationDBCl
 
 // GetPvcName returns the PVC name for the associated Process Group. If the process class doesn't use PVCs, an empty
 // string is returned.
-func (processGroupStatus *ProcessGroupStatus) GetPvcName(cluster *FoundationDBCluster) string {
+func (processGroupStatus *ProcessGroupStatus) GetPvcName(cluster *FoundationDBBaremetalCluster) string {
 	if !processGroupStatus.ProcessClass.IsStateful() {
 		return ""
 	}
@@ -1175,9 +1175,9 @@ func (str *ConnectionString) GenerateNewGenerationID() error {
 	return nil
 }
 
-// ClearUnsetDatabaseConfigurationKnobs clears any knobs that are not set in the FoundationDBCluster spec
+// ClearUnsetDatabaseConfigurationKnobs clears any knobs that are not set in the FoundationDBBaremetalCluster spec
 // but which are present in the DatabaseConfiguration returned from the FoundationDBStatus.
-func (cluster *FoundationDBCluster) ClearUnsetDatabaseConfigurationKnobs(
+func (cluster *FoundationDBBaremetalCluster) ClearUnsetDatabaseConfigurationKnobs(
 	configuration *DatabaseConfiguration,
 ) {
 	// We have to reset the excluded servers here otherwise we will trigger a reconfiguration if one or more servers
@@ -1216,7 +1216,7 @@ func (cluster *FoundationDBCluster) ClearUnsetDatabaseConfigurationKnobs(
 //
 // This allows us to compare the spec to the live configuration while ignoring
 // version flags that are unset in the spec.
-func (cluster *FoundationDBCluster) ClearMissingVersionFlags(configuration *DatabaseConfiguration) {
+func (cluster *FoundationDBBaremetalCluster) ClearMissingVersionFlags(configuration *DatabaseConfiguration) {
 	if cluster.Spec.DatabaseConfiguration.LogVersion == 0 {
 		configuration.LogVersion = 0
 	}
@@ -1227,7 +1227,7 @@ func (cluster *FoundationDBCluster) ClearMissingVersionFlags(configuration *Data
 
 // GetRunningVersion returns the running version of the cluster defined in the cluster status or if not defined the version
 // defined in the cluster spec.
-func (cluster *FoundationDBCluster) GetRunningVersion() string {
+func (cluster *FoundationDBBaremetalCluster) GetRunningVersion() string {
 	// We have to use the running version here otherwise if the operator gets killed during an upgrade it will try to apply
 	// the grv and commit proxies.
 	versionString := cluster.Status.RunningVersion
@@ -1240,44 +1240,44 @@ func (cluster *FoundationDBCluster) GetRunningVersion() string {
 
 // ShouldUseLocks determine whether we should use locks to coordinator global
 // operations.
-func (cluster *FoundationDBCluster) ShouldUseLocks() bool {
+func (cluster *FoundationDBBaremetalCluster) ShouldUseLocks() bool {
 	return false
 }
 
 // GetLockPrefix gets the prefix for the keys where we store locking
 // information.
-func (cluster *FoundationDBCluster) GetLockPrefix() string {
+func (cluster *FoundationDBBaremetalCluster) GetLockPrefix() string {
 
 	return "\xff\x02/org.foundationdb.kubernetes-operator"
 }
 
 // GetMaintenancePrefix returns the prefix that is used by the operator to store and read maintenance related information.
 // The prefix will be the provided GetLockPrefix appended by "maintenance".
-func (cluster *FoundationDBCluster) GetMaintenancePrefix() string {
+func (cluster *FoundationDBBaremetalCluster) GetMaintenancePrefix() string {
 	return fmt.Sprintf("%s/maintenance", cluster.GetLockPrefix())
 }
 
 // GetLockDuration determines how long we hold locks for.
-func (cluster *FoundationDBCluster) GetLockDuration() time.Duration {
+func (cluster *FoundationDBBaremetalCluster) GetLockDuration() time.Duration {
 	minutes := 10
 	return time.Duration(minutes) * time.Minute
 }
 
-func (cluster *FoundationDBCluster) IsBeingUpgraded() bool {
+func (cluster *FoundationDBBaremetalCluster) IsBeingUpgraded() bool {
 	// FIXME: Implement
 	return false
 }
-func (cluster *FoundationDBCluster) IsBeingUpgradedWithVersionIncompatibleVersion() bool {
+func (cluster *FoundationDBBaremetalCluster) IsBeingUpgradedWithVersionIncompatibleVersion() bool {
 	// FIXME: Implement
 	return false
 }
 
-func (cluster *FoundationDBCluster) GetDatabaseInteractionMode() DatabaseInteractionMode {
+func (cluster *FoundationDBBaremetalCluster) GetDatabaseInteractionMode() DatabaseInteractionMode {
 	// FIXME: Implement
 	return DatabaseInteractionModeFdbcli
 }
 
-func (cluster *FoundationDBCluster) GetLockID() string {
+func (cluster *FoundationDBBaremetalCluster) GetLockID() string {
 	return "fdb-baremetal-operator"
 }
 
@@ -1290,11 +1290,11 @@ var (
 	PodIPFamilyIPv6 = 6
 )
 
-func (cluster *FoundationDBCluster) GetPodIPFamily() int {
+func (cluster *FoundationDBBaremetalCluster) GetPodIPFamily() int {
 	return PodIPFamilyIPv4
 }
 
-func (cluster *FoundationDBCluster) GetLogGroup() string {
+func (cluster *FoundationDBBaremetalCluster) GetLogGroup() string {
 	return "fdb-cluster"
 }
 
@@ -1317,7 +1317,7 @@ func (cluster *FoundationDBCluster) GetLogGroup() string {
 // The default LogRouters value will be equal to 3 times the Logs value when
 // the UsableRegions is greater than 1. It will be equal to -1 when the
 // UsableRegions is less than or equal to 1.
-func (cluster *FoundationDBCluster) GetRoleCountsWithDefaults() RoleCounts {
+func (cluster *FoundationDBBaremetalCluster) GetRoleCountsWithDefaults() RoleCounts {
 	return cluster.Spec.DatabaseConfiguration.GetRoleCountsWithDefaults(
 		cluster.DesiredFaultTolerance(),
 	)
@@ -1328,7 +1328,7 @@ func (cluster *FoundationDBCluster) GetRoleCountsWithDefaults() RoleCounts {
 // alternatives provides a list of other process counts that can fulfill this
 // role instead. If any of those process counts is positive, then this will
 // return 0.
-func (cluster *FoundationDBCluster) calculateProcessCountFromRole(
+func (cluster *FoundationDBBaremetalCluster) calculateProcessCountFromRole(
 	count int,
 	alternatives ...int,
 ) int {
@@ -1352,7 +1352,7 @@ func (cluster *FoundationDBCluster) calculateProcessCountFromRole(
 //
 // If the cluster is using multi-KC replication, this will divide the total
 // count across the number of KCs in the data center.
-func (cluster *FoundationDBCluster) calculateProcessCount(
+func (cluster *FoundationDBBaremetalCluster) calculateProcessCount(
 	addFaultTolerance bool,
 	counts ...int,
 ) int {
@@ -1378,7 +1378,7 @@ func (cluster *FoundationDBCluster) calculateProcessCount(
 // will only reflect the number of Pods that will be created to host storage server processes.
 // If storageServersPerPod is set the total amount of storage server processes will be
 // the storage process count multiplied by storageServersPerPod.
-func (cluster *FoundationDBCluster) GetProcessCountsWithDefaults() (ProcessCounts, error) {
+func (cluster *FoundationDBBaremetalCluster) GetProcessCountsWithDefaults() (ProcessCounts, error) {
 	DCID := "FIXME"
 	roleCounts := cluster.GetRoleCountsWithDefaults()
 	processCounts := cluster.Spec.DatabaseConfiguration.ProcessCounts
@@ -1456,18 +1456,18 @@ func (cluster *FoundationDBCluster) GetProcessCountsWithDefaults() (ProcessCount
 
 // DesiredFaultTolerance returns the number of replicas we should be able to
 // lose when the cluster is at full replication health.
-func (cluster *FoundationDBCluster) DesiredFaultTolerance() int {
+func (cluster *FoundationDBBaremetalCluster) DesiredFaultTolerance() int {
 	return DesiredFaultTolerance(cluster.Spec.DatabaseConfiguration.RedundancyMode)
 }
 
 // MinimumFaultDomains returns the number of fault domains the cluster needs
 // to function.
-func (cluster *FoundationDBCluster) MinimumFaultDomains() int {
+func (cluster *FoundationDBBaremetalCluster) MinimumFaultDomains() int {
 	return MinimumFaultDomains(cluster.Spec.DatabaseConfiguration.RedundancyMode)
 }
 
 // DesiredCoordinatorCount returns the number of coordinators to recruit for a cluster.
-func (cluster *FoundationDBCluster) DesiredCoordinatorCount() int {
+func (cluster *FoundationDBBaremetalCluster) DesiredCoordinatorCount() int {
 	if cluster.Spec.DatabaseConfiguration.UsableRegions > 1 ||
 		cluster.Spec.DatabaseConfiguration.RedundancyMode == RedundancyModeThreeDataHall {
 		return 9
@@ -1476,7 +1476,7 @@ func (cluster *FoundationDBCluster) DesiredCoordinatorCount() int {
 	return cluster.MinimumFaultDomains() + cluster.DesiredFaultTolerance()
 }
 
-func (cluster *FoundationDBCluster) GetResourceLabels() map[string]string {
+func (cluster *FoundationDBBaremetalCluster) GetResourceLabels() map[string]string {
 	labels := map[string]string{}
 	return labels
 }

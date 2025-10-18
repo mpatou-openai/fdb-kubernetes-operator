@@ -10,7 +10,7 @@ There are two main pieces to the operator: the **Custom Resource Definition** an
 
 Our operator currently uses the following custom resource definitions:
 
-* [FoundationDBCluster](../cluster_spec.md)
+* [FoundationDBBaremetalCluster](../cluster_spec.md)
 * [FoundationDBBackup](../backup_spec.md)
 * [FoundationDBRestore](../restore_spec.md)
 
@@ -20,7 +20,7 @@ All of these resources are managed by a single controller, with a single deploym
 
 When we use the term "cluster" in this document with no other qualifiers, we are referring to a FoundationDB cluster. We will refer to a Kubernetes Cluster as a "KC" for brevity, and to avoid overloading the word "cluster".
 
-When we use the term "cluster status" in this document, it refers to the status of the `FoundationDBCluster` resource in Kubernetes. When we use the term "database status" in this document, it refers to the output of the `status json` command in `fdbcli`.
+When we use the term "cluster status" in this document, it refers to the status of the `FoundationDBBaremetalCluster` resource in Kubernetes. When we use the term "database status" in this document, it refers to the output of the `status json` command in `fdbcli`.
 
 When we reference something that contains the name of the cluster, we will assume the cluster is named `sample-cluster`.
 
@@ -475,7 +475,7 @@ If a process has at least one role, it's not safe to remove this process.
 If a process is missing in the machine-readable status the operator will issue an additional `exclude` command for those missing processes to ensure they are not serving any log or storage roles.
 
 The current default for the operator is to use the Pod IP for the exclusion command, if a Pod get's deleted and recreated it could get a new IP address and the operator has to issue a new exclude command for the new IP address.
-To workaround this FoundationDB added support for locality based exclusions in 7.0 and the operator supports this by setting [useLocalitiesForExclusion](https://github.com/FoundationDB/fdb-kubernetes-operator/blob/main/docs/cluster_spec.md#foundationdbclusterautomationoptions) in the FoundationDBCluster spec.
+To workaround this FoundationDB added support for locality based exclusions in 7.0 and the operator supports this by setting [useLocalitiesForExclusion](https://github.com/FoundationDB/fdb-kubernetes-operator/blob/main/docs/cluster_spec.md#foundationdbbaremetalclusterautomationoptions) in the FoundationDBBaremetalCluster spec.
 
 NOTE: the operator is not able to use the `failed` option for exclusions.
 

@@ -6,8 +6,8 @@ The operator supports json-structured logging and will emit those logs to stdout
 The operator sets different log keys for easier log filtering in different contexts.
 All cluster related logs will contain the following fields:
 
-- `namespace`: Namespace of the `FoundationDBCluster` resource that is currently processed.
-- `cluster`: The name of the `FoundationDBCluster` resource that is currently processed.
+- `namespace`: Namespace of the `FoundationDBBaremetalCluster` resource that is currently processed.
+- `cluster`: The name of the `FoundationDBBaremetalCluster` resource that is currently processed.
 
 In addition the operator will set the `reconciler` field to the current sub-reconciler.
 If the operator iterates over all or a subset of `ProcessGroups`, the operator will set `processGroupID` to the current process group ID.
@@ -194,7 +194,7 @@ When the debugging is finished just remove the `foundationdb.org/isolate-process
 
 If more than one operator instance is used to manage a FoundationDB cluster, e.g. in case of a multi-region cluster, there can be cases where an operator instance was partitioned for a long time.
 In this case the operator might not be able to connect again to the cluster because the coordinators have changed and none of the old coordinators are still running.
-In this case use the [kubectl-fdb plugin](../../kubectl-fdb/Readme.md) to update the connection string in the `FoundationDBCluster` resource status and restart the operator pod.
+In this case use the [kubectl-fdb plugin](../../kubectl-fdb/Readme.md) to update the connection string in the `FoundationDBBaremetalCluster` resource status and restart the operator pod.
 You can use the `kubectl update connection-string` command to update the connection string for a cluster.
 
 ## Next

@@ -44,7 +44,7 @@ type SimulationOptions struct {
 	SimulateTime bool
 }
 
-type FoundationDBClusterReconciler struct {
+type FoundationDBBaremetalClusterReconciler struct {
 	GetTimeout  time.Duration
 	PostTimeout time.Duration
 
@@ -56,14 +56,14 @@ type FoundationDBClusterReconciler struct {
 	Namespace         string
 }
 
-// NewFoundationDBClusterReconciler constructs a reconciler instance.
-func NewFoundationDBClusterReconciler() *FoundationDBClusterReconciler {
-	return &FoundationDBClusterReconciler{}
+// NewFoundationDBBaremetalClusterReconciler constructs a reconciler instance.
+func NewFoundationDBBaremetalClusterReconciler() *FoundationDBBaremetalClusterReconciler {
+	return &FoundationDBBaremetalClusterReconciler{}
 }
 
 // Reconcile currently contains placeholder logic for the bare-metal operator.
-func (r *FoundationDBClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	cluster := &fdbv1beta2.FoundationDBCluster{}
+func (r *FoundationDBBaremetalClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	cluster := &fdbv1beta2.FoundationDBBaremetalCluster{}
 
 	err := r.Get(ctx, req.NamespacedName, cluster)
 	if err != nil {
@@ -94,9 +94,9 @@ func (r *FoundationDBClusterReconciler) Reconcile(ctx context.Context, req ctrl.
 }
 
 // SetupWithManager configures the reconciler with the controller-runtime manager.
-func (r *FoundationDBClusterReconciler) SetupWithManager(mgr ctrl.Manager, maxConcurrentReconciles int) error {
+func (r *FoundationDBBaremetalClusterReconciler) SetupWithManager(mgr ctrl.Manager, maxConcurrentReconciles int) error {
 	builder := ctrl.NewControllerManagedBy(mgr).
-		For(&fdbv1beta2.FoundationDBCluster{}).
+		For(&fdbv1beta2.FoundationDBBaremetalCluster{}).
 		Owns(&corev1.ConfigMap{})
 
 	return builder.WithOptions(controller.Options{MaxConcurrentReconciles: maxConcurrentReconciles}).Complete(r)

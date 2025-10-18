@@ -32,7 +32,7 @@ type DatabaseClientProvider struct{}
 
 // GetLockClient generates a client for working with locks through the database.
 func (p DatabaseClientProvider) GetLockClient(
-	cluster *fdbv1beta2.FoundationDBCluster,
+	cluster *fdbv1beta2.FoundationDBBaremetalCluster,
 ) (fdbadminclient.LockClient, error) {
 	return NewMockLockClient(cluster)
 }
@@ -40,7 +40,7 @@ func (p DatabaseClientProvider) GetLockClient(
 // GetLockClientWithLogger generates a client for working with locks through the database.
 // The provided logger will be used as logger for the LockClient.
 func (p DatabaseClientProvider) GetLockClientWithLogger(
-	cluster *fdbv1beta2.FoundationDBCluster,
+	cluster *fdbv1beta2.FoundationDBBaremetalCluster,
 	_ logr.Logger,
 ) (fdbadminclient.LockClient, error) {
 	return NewMockLockClient(cluster)
@@ -49,7 +49,7 @@ func (p DatabaseClientProvider) GetLockClientWithLogger(
 // GetAdminClient generates a client for performing administrative actions
 // against the database.
 func (p DatabaseClientProvider) GetAdminClient(
-	cluster *fdbv1beta2.FoundationDBCluster,
+	cluster *fdbv1beta2.FoundationDBBaremetalCluster,
 	kubernetesClient client.Client,
 ) (fdbadminclient.AdminClient, error) {
 	return NewMockAdminClient(cluster, kubernetesClient)
@@ -58,7 +58,7 @@ func (p DatabaseClientProvider) GetAdminClient(
 // GetAdminClientWithLogger generates a client for performing administrative actions
 // against the database.
 func (p DatabaseClientProvider) GetAdminClientWithLogger(
-	cluster *fdbv1beta2.FoundationDBCluster,
+	cluster *fdbv1beta2.FoundationDBBaremetalCluster,
 	kubernetesClient client.Client,
 	_ logr.Logger,
 ) (fdbadminclient.AdminClient, error) {

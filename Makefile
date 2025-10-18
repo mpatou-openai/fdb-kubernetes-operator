@@ -67,7 +67,7 @@ $(eval $(call godep,goimports,GO_IMPORTS))
 GO_SRC=$(shell find . -name "*.go" -not -name "zz_generated.*.go" -not -name ".\#*.go")
 GENERATED_GO=api/v1beta2/zz_generated.deepcopy.go
 GO_ALL=${GO_SRC} ${GENERATED_GO}
-MANIFESTS=config/crd/bases/apps.foundationdb.org_foundationdbbackups.yaml config/crd/bases/apps.foundationdb.org_foundationdbclusters.yaml config/crd/bases/apps.foundationdb.org_foundationdbrestores.yaml
+MANIFESTS=config/crd/bases/apps.foundationdb.org_foundationdbbackups.yaml config/crd/bases/apps.foundationdb.org_foundationdbbaremetalclusters.yaml config/crd/bases/apps.foundationdb.org_foundationdbrestores.yaml
 SAMPLES=config/samples/deployment.yaml config/samples/cluster.yaml config/samples/backup.yaml config/samples/restore.yaml config/samples/client.yaml
 
 ifeq "$(TEST_RACE_CONDITIONS)" "1"
@@ -214,7 +214,7 @@ config/samples/client.yaml: $(KUSTOMIZE) config/tests/client/*.yaml
 bin/po-docgen: cmd/po-docgen/*.go
 	go build -o bin/po-docgen cmd/po-docgen/main.go  cmd/po-docgen/api.go
 
-CLUSTER_DOCS_INPUT=api/v1beta2/foundationdbcluster_types.go api/v1beta2/foundationdb_custom_parameter.go api/v1beta2/foundationdb_database_configuration.go api/v1beta2/foundationdb_process_class.go api/v1beta2/image_config.go
+CLUSTER_DOCS_INPUT=api/v1beta2/foundationdbbaremetalcluster_types.go api/v1beta2/foundationdb_custom_parameter.go api/v1beta2/foundationdb_database_configuration.go api/v1beta2/foundationdb_process_class.go api/v1beta2/image_config.go
 
 docs/cluster_spec.md: bin/po-docgen $(CLUSTER_DOCS_INPUT)
 	bin/po-docgen api $(CLUSTER_DOCS_INPUT) > $@

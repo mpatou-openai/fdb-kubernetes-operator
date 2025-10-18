@@ -8,7 +8,7 @@ To explicitly set process counts, you could configure the cluster as follows:
 
 ```yaml
 apiVersion: apps.foundationdb.org/v1beta2
-kind: FoundationDBCluster
+kind: FoundationDBBaremetalCluster
 metadata:
   name: sample-cluster
 spec:
@@ -37,7 +37,7 @@ Instead of setting the process counts directly, let's update the counts of recru
 
 ```yaml
 apiVersion: apps.foundationdb.org/v1beta2
-kind: FoundationDBCluster
+kind: FoundationDBBaremetalCluster
 metadata:
   name: sample-cluster
 spec:
@@ -60,7 +60,7 @@ You can shrink a cluster by changing the database configuration or process count
 
 ```yaml
 apiVersion: apps.foundationdb.org/v1beta2
-kind: FoundationDBCluster
+kind: FoundationDBBaremetalCluster
 metadata:
   name: sample-cluster
 spec:
@@ -83,7 +83,7 @@ You can change the replication mode in the database by changing the field in the
 
 ```yaml
 apiVersion: apps.foundationdb.org/v1beta2
-kind: FoundationDBCluster
+kind: FoundationDBBaremetalCluster
 metadata:
   name: sample-cluster
 spec:

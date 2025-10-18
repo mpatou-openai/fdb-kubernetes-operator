@@ -33,7 +33,7 @@ import (
 )
 
 // GetConfigMap builds a config map for a cluster's dynamic config
-func GetConfigMap(cluster *fdbv1beta2.FoundationDBCluster) (*corev1.ConfigMap, error) {
+func GetConfigMap(cluster *fdbv1beta2.FoundationDBBaremetalCluster) (*corev1.ConfigMap, error) {
 	data := make(map[string]string)
 
 	connectionString := cluster.Status.ConnectionString
@@ -110,7 +110,7 @@ func BuildOwnerReference(
 
 // GetObjectMetadata returns the ObjectMetadata for a process
 func GetObjectMetadata(
-	cluster *fdbv1beta2.FoundationDBCluster,
+	cluster *fdbv1beta2.FoundationDBBaremetalCluster,
 	base *metav1.ObjectMeta,
 ) metav1.ObjectMeta {
 	var metadata *metav1.ObjectMeta
@@ -133,7 +133,7 @@ func GetObjectMetadata(
 	return *metadata
 }
 
-func getConfigMapMetadata(cluster *fdbv1beta2.FoundationDBCluster) metav1.ObjectMeta {
+func getConfigMapMetadata(cluster *fdbv1beta2.FoundationDBBaremetalCluster) metav1.ObjectMeta {
 	var metadata metav1.ObjectMeta
 	metadata = GetObjectMetadata(cluster, nil)
 
@@ -147,7 +147,7 @@ func getConfigMapName(clusterName string) string {
 }
 
 func getDataForMonitorConf(
-	cluster *fdbv1beta2.FoundationDBCluster,
+	cluster *fdbv1beta2.FoundationDBBaremetalCluster,
 	imageType fdbv1beta2.ImageType,
 	pClass fdbv1beta2.ProcessClass,
 	serversPerPod int,
@@ -162,7 +162,7 @@ func getDataForMonitorConf(
 }
 
 func setMonitorConfForFilename(
-	cluster *fdbv1beta2.FoundationDBCluster,
+	cluster *fdbv1beta2.FoundationDBBaremetalCluster,
 	data map[string]string,
 	filename string,
 	connectionString string,

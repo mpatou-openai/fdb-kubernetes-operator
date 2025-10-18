@@ -33,7 +33,7 @@ import (
 
 // GetStartCommand builds the expected start command for a process group.
 func GetStartCommand(
-	cluster *fdbv1beta2.FoundationDBCluster,
+	cluster *fdbv1beta2.FoundationDBBaremetalCluster,
 	processClass fdbv1beta2.ProcessClass,
 	processNumber int,
 	processCount int,
@@ -55,7 +55,7 @@ func GetStartCommand(
 
 // GetStartCommandWithSubstitutions will be used by GetStartCommand and for internal testing.
 func GetStartCommandWithSubstitutions(
-	cluster *fdbv1beta2.FoundationDBCluster,
+	cluster *fdbv1beta2.FoundationDBBaremetalCluster,
 	processClass fdbv1beta2.ProcessClass,
 	substitutions map[string]string,
 	processNumber int,
@@ -127,7 +127,7 @@ type CloudNode struct {
 
 // GetMonitorConf builds the monitor conf template
 func GetMonitorConf(
-	cluster *fdbv1beta2.FoundationDBCluster,
+	cluster *fdbv1beta2.FoundationDBBaremetalCluster,
 	processClass fdbv1beta2.ProcessClass,
 	serversPerNode int,
 	currentNode *CloudNode,
@@ -147,7 +147,7 @@ func GetMonitorConf(
 }
 
 func getMonitorConfStartCommandLines(
-	cluster *fdbv1beta2.FoundationDBCluster,
+	cluster *fdbv1beta2.FoundationDBBaremetalCluster,
 	processClass fdbv1beta2.ProcessClass,
 	substitutions map[string]string,
 	processNumber int,
@@ -195,7 +195,7 @@ func getMonitorConfStartCommandLines(
 
 // GetMonitorProcessConfiguration builds the monitor conf template for the unified image.
 func GetMonitorProcessConfiguration(
-	cluster *fdbv1beta2.FoundationDBCluster,
+	cluster *fdbv1beta2.FoundationDBBaremetalCluster,
 	processClass fdbv1beta2.ProcessClass,
 	processCount int,
 	imageType fdbv1beta2.ImageType,

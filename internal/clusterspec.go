@@ -27,7 +27,7 @@ import (
 // future-proof form, by applying any implicit defaults and moving configuration
 // from deprecated fields into fully-supported fields.
 func NormalizeClusterSpec(
-	cluster *fdbv1beta2.FoundationDBCluster,
+	cluster *fdbv1beta2.FoundationDBBaremetalCluster,
 ) error {
 	// FIXME: implement that
 	return nil

@@ -54,7 +54,7 @@ import (
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
 var k8sClient *mockclient.MockClient
-var clusterReconciler *FoundationDBClusterReconciler
+var clusterReconciler *FoundationDBBaremetalClusterReconciler
 var requeueLimit = 20
 
 func TestAPIs(t *testing.T) {
@@ -98,7 +98,7 @@ var _ = AfterEach(func() {
 	}
 })
 
-func reconcileCluster(cluster *fdbv1beta2.FoundationDBCluster) (reconcile.Result, error) {
+func reconcileCluster(cluster *fdbv1beta2.FoundationDBBaremetalCluster) (reconcile.Result, error) {
 	return reconcileObject(clusterReconciler, cluster.ObjectMeta, requeueLimit)
 }
 
@@ -136,7 +136,7 @@ func reconcileObject(
 	return result, err
 }
 
-func setupClusterForTest(cluster *fdbv1beta2.FoundationDBCluster) error {
+func setupClusterForTest(cluster *fdbv1beta2.FoundationDBBaremetalCluster) error {
 	err := k8sClient.Create(context.TODO(), cluster)
 	if err != nil {
 		return err
@@ -155,10 +155,10 @@ func setupClusterForTest(cluster *fdbv1beta2.FoundationDBCluster) error {
 	return internal.NormalizeClusterSpec(cluster)
 }
 
-func createTestClusterReconciler() *FoundationDBClusterReconciler {
-	return &FoundationDBClusterReconciler{
+func createTestClusterReconciler() *FoundationDBBaremetalClusterReconciler {
+	return &FoundationDBBaremetalClusterReconciler{
 		Client:   k8sClient,
-		Log:      ctrl.Log.WithName("controllers").WithName("FoundationDBCluster"),
+		Log:      ctrl.Log.WithName("controllers").WithName("FoundationDBBaremetalCluster"),
 		Recorder: k8sClient,
 		SimulationOptions: SimulationOptions{
 			SimulateZones: true,

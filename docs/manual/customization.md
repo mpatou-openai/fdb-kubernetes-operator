@@ -18,7 +18,7 @@ This will start multiple FDB processes inside of a single container, under a sin
 
 ```yaml
 apiVersion: apps.foundationdb.org/v1beta2
-kind: FoundationDBCluster
+kind: FoundationDBBaremetalCluster
 metadata:
   name: sample-cluster
 spec:
@@ -35,7 +35,7 @@ To use a different `StorageClass` than the default you can set your desired `Sto
 
 ```yaml
 apiVersion: apps.foundationdb.org/v1beta2
-kind: FoundationDBCluster
+kind: FoundationDBBaremetalCluster
 metadata:
   name: sample-cluster
 spec:
@@ -51,7 +51,7 @@ You can use the same field to customize other parts of the volume claim. For ins
 
 ```yaml
 apiVersion: apps.foundationdb.org/v1beta2
-kind: FoundationDBCluster
+kind: FoundationDBBaremetalCluster
 metadata:
   name: sample-cluster
 spec:
@@ -69,7 +69,7 @@ A change to the volume claim template will replace all PVC' and the according Po
 
 ```yaml
 apiVersion: apps.foundationdb.org/v1beta2
-kind: FoundationDBCluster
+kind: FoundationDBBaremetalCluster
 metadata:
   name: sample-cluster
 spec:
@@ -95,7 +95,7 @@ The [warnings](warnings.md#resource-requirements) of this documentation contains
 
 ```yaml
 apiVersion: apps.foundationdb.org/v1beta2
-kind: FoundationDBCluster
+kind: FoundationDBBaremetalCluster
 metadata:
     name: sample-cluster
 spec:
@@ -132,7 +132,7 @@ container.
 
 ```yaml
 apiVersion: apps.foundationdb.org/v1beta2
-kind: FoundationDBCluster
+kind: FoundationDBBaremetalCluster
 metadata:
     name: sample-cluster
 spec:
@@ -151,7 +151,7 @@ The image configs also allow specifying a specific tag for the images.
 
 ```yaml
 apiVersion: apps.foundationdb.org/v1beta2
-kind: FoundationDBCluster
+kind: FoundationDBBaremetalCluster
 metadata:
     name: sample-cluster
 spec:
@@ -168,7 +168,7 @@ You can also specify multiple image configs, and customize image configs separat
 
 ```yaml
 apiVersion: apps.foundationdb.org/v1beta2
-kind: FoundationDBCluster
+kind: FoundationDBBaremetalCluster
 metadata:
     name: sample-cluster
 spec:
@@ -188,7 +188,7 @@ You can also specify a suffix for the tag, which tells the operator to append th
 
 ```yaml
 apiVersion: apps.foundationdb.org/v1beta2
-kind: FoundationDBCluster
+kind: FoundationDBBaremetalCluster
 metadata:
     name: sample-cluster
 spec:
@@ -297,7 +297,7 @@ The operator has default labels that it applies to all resources it manages in o
 
 ```yaml
 apiVersion: apps.foundationdb.org/v1beta2
-kind: FoundationDBCluster
+kind: FoundationDBBaremetalCluster
 metadata:
     name: sample-cluster
 spec:
@@ -318,7 +318,7 @@ Add both sets of labels to all resources:
 
 ```yaml
 apiVersion: apps.foundationdb.org/v1beta2
-kind: FoundationDBCluster
+kind: FoundationDBBaremetalCluster
 metadata:
   name: sample-cluster
 spec:
@@ -339,7 +339,7 @@ Update the match labels:
 
 ```yaml
 apiVersion: apps.foundationdb.org/v1beta2
-kind: FoundationDBCluster
+kind: FoundationDBBaremetalCluster
 metadata:
   name: sample-cluster
 spec:
@@ -356,7 +356,7 @@ Remove the old labels from the spec:
 
 ```yaml
 apiVersion: apps.foundationdb.org/v1beta2
-kind: FoundationDBCluster
+kind: FoundationDBBaremetalCluster
 metadata:
   name: sample-cluster
 spec:
@@ -378,7 +378,7 @@ The operator also sets labels on pods and PVCs indicating the process class and 
 
 ```yaml
 apiVersion: apps.foundationdb.org/v1beta2
-kind: FoundationDBCluster
+kind: FoundationDBBaremetalCluster
 metadata:
   name: sample-cluster
 spec:
@@ -398,7 +398,7 @@ First, you will need to add the new label to all of the resources:
 
 ```yaml
 apiVersion: apps.foundationdb.org/v1beta2
-kind: FoundationDBCluster
+kind: FoundationDBBaremetalCluster
 metadata:
     name: sample-cluster
 spec:
@@ -413,7 +413,7 @@ Once this change is reconciled and the new label is applied, you can remove the 
 
 ```yaml
 apiVersion: apps.foundationdb.org/v1beta2
-kind: FoundationDBCluster
+kind: FoundationDBBaremetalCluster
 metadata:
   name: sample-cluster
 spec:
@@ -439,7 +439,7 @@ To switch to the split image, set the flag in the cluster spec as follows:
 
 ```yaml
 apiVersion: apps.foundationdb.org/v1beta2
-kind: FoundationDBCluster
+kind: FoundationDBBaremetalCluster
 metadata:
   name: sample-cluster
 spec:

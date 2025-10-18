@@ -51,10 +51,10 @@ type ReplacementBucket struct {
 }
 ```
 
-The `getMaxReplacements(cluster *fdbv1beta2.FoundationDBCluster, maxReplacements int) int` method would be adjusted to return a `map[fdbv1beta2.ProcessClass]int`:
+The `getMaxReplacements(cluster *fdbv1beta2.FoundationDBBaremetalCluster, maxReplacements int) int` method would be adjusted to return a `map[fdbv1beta2.ProcessClass]int`:
 
 ```go
-func getMaxReplacements(cluster *fdbv1beta2.FoundationDBCluster, maxReplacements int) map[fdbv1beta2.ProcessClass]int {
+func getMaxReplacements(cluster *fdbv1beta2.FoundationDBBaremetalCluster, maxReplacements int) map[fdbv1beta2.ProcessClass]int {
 	if cluster.ReplacementBucketIsEnabled() {
 		return cluster.getReplacementBuckets()
     }
@@ -78,7 +78,7 @@ func getMaxReplacements(cluster *fdbv1beta2.FoundationDBCluster, maxReplacements
 The `getReplacementBucket()` could be implemented like this:
 
 ```go
-func (cluster *FoundationDBCluster) getReplacementBuckets() map[fdbv1beta2.ProcessClass]int {
+func (cluster *FoundationDBBaremetalCluster) getReplacementBuckets() map[fdbv1beta2.ProcessClass]int {
 	// The maximum number of replacements will be the defined number in the cluster spec
 	// minus all currently ongoing replacements e.g. process groups marked for removal but
 	// not fully excluded.
@@ -105,7 +105,7 @@ The method `getReplacementBucketWithDefaults()` will return a map of the type `m
 To allow the correct selection of the replacement bucket we need to adjust the `ReplaceFailedProcessGroups` method:
 
 ```go
-func ReplaceFailedProcessGroups(log logr.Logger, cluster *fdbv1beta2.FoundationDBCluster, adminClient fdbadminclient.AdminClient) bool {
+func ReplaceFailedProcessGroups(log logr.Logger, cluster *fdbv1beta2.FoundationDBBaremetalCluster, adminClient fdbadminclient.AdminClient) bool {
     ...
 	replacementBucket := getMaxReplacements(cluster, cluster.GetMaxConcurrentAutomaticReplacements())
 	replacementBucketIsEnabled := cluster.GetReplacementBucketEnabled()

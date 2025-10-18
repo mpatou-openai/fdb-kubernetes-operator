@@ -1199,7 +1199,7 @@ var _ = Describe("status_checks", func() {
 
 		DescribeTable(
 			"should return if the cluster has the desired fault tolerance",
-			func(status *fdbv1beta2.FoundationDBStatus, cluster *fdbv1beta2.FoundationDBCluster, expected bool) {
+			func(status *fdbv1beta2.FoundationDBStatus, cluster *fdbv1beta2.FoundationDBBaremetalCluster, expected bool) {
 				Expect(HasDesiredFaultToleranceFromStatus(log, status, cluster)).To(Equal(expected))
 			},
 			Entry("cluster is fully replicated",
@@ -1272,8 +1272,8 @@ var _ = Describe("status_checks", func() {
 						},
 					},
 				},
-				&fdbv1beta2.FoundationDBCluster{
-					Spec: fdbv1beta2.FoundationDBClusterSpec{
+				&fdbv1beta2.FoundationDBBaremetalCluster{
+					Spec: fdbv1beta2.FoundationDBBaremetalClusterSpec{
 						DatabaseConfiguration: fdbv1beta2.DatabaseConfiguration{
 							RedundancyMode: fdbv1beta2.RedundancyModeTriple,
 						},
@@ -1329,8 +1329,8 @@ var _ = Describe("status_checks", func() {
 					},
 					Cluster: fdbv1beta2.FoundationDBStatusClusterInfo{},
 				},
-				&fdbv1beta2.FoundationDBCluster{
-					Spec: fdbv1beta2.FoundationDBClusterSpec{
+				&fdbv1beta2.FoundationDBBaremetalCluster{
+					Spec: fdbv1beta2.FoundationDBBaremetalClusterSpec{
 						DatabaseConfiguration: fdbv1beta2.DatabaseConfiguration{
 							RedundancyMode: fdbv1beta2.RedundancyModeTriple,
 						},
@@ -1407,8 +1407,8 @@ var _ = Describe("status_checks", func() {
 						},
 					},
 				},
-				&fdbv1beta2.FoundationDBCluster{
-					Spec: fdbv1beta2.FoundationDBClusterSpec{
+				&fdbv1beta2.FoundationDBBaremetalCluster{
+					Spec: fdbv1beta2.FoundationDBBaremetalClusterSpec{
 						DatabaseConfiguration: fdbv1beta2.DatabaseConfiguration{
 							RedundancyMode: fdbv1beta2.RedundancyModeTriple,
 						},
@@ -1485,8 +1485,8 @@ var _ = Describe("status_checks", func() {
 						},
 					},
 				},
-				&fdbv1beta2.FoundationDBCluster{
-					Spec: fdbv1beta2.FoundationDBClusterSpec{
+				&fdbv1beta2.FoundationDBBaremetalCluster{
+					Spec: fdbv1beta2.FoundationDBBaremetalClusterSpec{
 						DatabaseConfiguration: fdbv1beta2.DatabaseConfiguration{
 							RedundancyMode: fdbv1beta2.RedundancyModeTriple,
 						},
@@ -1564,8 +1564,8 @@ var _ = Describe("status_checks", func() {
 					},
 				},
 			},
-			&fdbv1beta2.FoundationDBCluster{
-				Spec: fdbv1beta2.FoundationDBClusterSpec{
+			&fdbv1beta2.FoundationDBBaremetalCluster{
+				Spec: fdbv1beta2.FoundationDBBaremetalClusterSpec{
 					DatabaseConfiguration: fdbv1beta2.DatabaseConfiguration{
 						RedundancyMode: fdbv1beta2.RedundancyModeTriple,
 					},
@@ -1659,7 +1659,7 @@ var _ = Describe("status_checks", func() {
 	When("performing the exclude safety check.", func() {
 		DescribeTable(
 			"should return if the safety check is satisfied or not",
-			func(cluster *fdbv1beta2.FoundationDBCluster, status *fdbv1beta2.FoundationDBStatus, expected error) {
+			func(cluster *fdbv1beta2.FoundationDBBaremetalCluster, status *fdbv1beta2.FoundationDBStatus, expected error) {
 				err := CanSafelyExcludeProcessesWithRecoveryState(cluster, status, 120.0)
 				if expected == nil {
 					Expect(err).To(BeNil())
@@ -1669,8 +1669,8 @@ var _ = Describe("status_checks", func() {
 				}
 			},
 			Entry("cluster is fully reconciled",
-				&fdbv1beta2.FoundationDBCluster{
-					Status: fdbv1beta2.FoundationDBClusterStatus{
+				&fdbv1beta2.FoundationDBBaremetalCluster{
+					Status: fdbv1beta2.FoundationDBBaremetalClusterStatus{
 						RunningVersion: "7.1.20",
 					},
 				},
@@ -1689,8 +1689,8 @@ var _ = Describe("status_checks", func() {
 				nil,
 			),
 			Entry("cluster is unavailable",
-				&fdbv1beta2.FoundationDBCluster{
-					Status: fdbv1beta2.FoundationDBClusterStatus{
+				&fdbv1beta2.FoundationDBBaremetalCluster{
+					Status: fdbv1beta2.FoundationDBBaremetalClusterStatus{
 						RunningVersion: "7.1.20",
 					},
 				},
@@ -1709,8 +1709,8 @@ var _ = Describe("status_checks", func() {
 				fmt.Errorf("cluster is unavailable, cannot exclude processes"),
 			),
 			Entry("cluster has more than one active generations",
-				&fdbv1beta2.FoundationDBCluster{
-					Status: fdbv1beta2.FoundationDBClusterStatus{
+				&fdbv1beta2.FoundationDBBaremetalCluster{
+					Status: fdbv1beta2.FoundationDBBaremetalClusterStatus{
 						RunningVersion: "7.1.20",
 					},
 				},
@@ -1730,8 +1730,8 @@ var _ = Describe("status_checks", func() {
 			),
 			Entry(
 				"cluster has more than one active generations",
-				&fdbv1beta2.FoundationDBCluster{
-					Status: fdbv1beta2.FoundationDBClusterStatus{
+				&fdbv1beta2.FoundationDBBaremetalCluster{
+					Status: fdbv1beta2.FoundationDBBaremetalClusterStatus{
 						RunningVersion: "7.1.20",
 					},
 				},
@@ -1753,8 +1753,8 @@ var _ = Describe("status_checks", func() {
 			),
 			Entry(
 				"cluster's last recovery is 10 seconds ago",
-				&fdbv1beta2.FoundationDBCluster{
-					Status: fdbv1beta2.FoundationDBClusterStatus{
+				&fdbv1beta2.FoundationDBBaremetalCluster{
+					Status: fdbv1beta2.FoundationDBBaremetalClusterStatus{
 						RunningVersion: "7.1.57",
 					},
 				},
@@ -1776,8 +1776,8 @@ var _ = Describe("status_checks", func() {
 				),
 			),
 			Entry("cluster's last recovery is 120 seconds ago",
-				&fdbv1beta2.FoundationDBCluster{
-					Status: fdbv1beta2.FoundationDBClusterStatus{
+				&fdbv1beta2.FoundationDBBaremetalCluster{
+					Status: fdbv1beta2.FoundationDBBaremetalClusterStatus{
 						RunningVersion: "7.1.57",
 					},
 				},
@@ -1802,7 +1802,7 @@ var _ = Describe("status_checks", func() {
 	When("performing the include safety check.", func() {
 		DescribeTable(
 			"should return if the safety check is satisfied or not",
-			func(cluster *fdbv1beta2.FoundationDBCluster, status *fdbv1beta2.FoundationDBStatus, expected error) {
+			func(cluster *fdbv1beta2.FoundationDBBaremetalCluster, status *fdbv1beta2.FoundationDBStatus, expected error) {
 				err := CanSafelyIncludeProcesses(cluster, status, 300.0)
 				if expected == nil {
 					Expect(err).To(BeNil())
@@ -1812,8 +1812,8 @@ var _ = Describe("status_checks", func() {
 				}
 			},
 			Entry("cluster is fully reconciled",
-				&fdbv1beta2.FoundationDBCluster{
-					Status: fdbv1beta2.FoundationDBClusterStatus{
+				&fdbv1beta2.FoundationDBBaremetalCluster{
+					Status: fdbv1beta2.FoundationDBBaremetalClusterStatus{
 						RunningVersion: "7.1.20",
 					},
 				},
@@ -1834,8 +1834,8 @@ var _ = Describe("status_checks", func() {
 			),
 			Entry(
 				"cluster is not fully reconciled",
-				&fdbv1beta2.FoundationDBCluster{
-					Status: fdbv1beta2.FoundationDBClusterStatus{
+				&fdbv1beta2.FoundationDBBaremetalCluster{
+					Status: fdbv1beta2.FoundationDBBaremetalClusterStatus{
 						RunningVersion: "7.1.20",
 					},
 				},
@@ -1857,8 +1857,8 @@ var _ = Describe("status_checks", func() {
 				),
 			),
 			Entry("cluster is unavailable",
-				&fdbv1beta2.FoundationDBCluster{
-					Status: fdbv1beta2.FoundationDBClusterStatus{
+				&fdbv1beta2.FoundationDBBaremetalCluster{
+					Status: fdbv1beta2.FoundationDBBaremetalClusterStatus{
 						RunningVersion: "7.1.20",
 					},
 				},
@@ -1878,8 +1878,8 @@ var _ = Describe("status_checks", func() {
 				fmt.Errorf("cluster is unavailable, cannot include processes"),
 			),
 			Entry("cluster has ten or less active generations",
-				&fdbv1beta2.FoundationDBCluster{
-					Status: fdbv1beta2.FoundationDBClusterStatus{
+				&fdbv1beta2.FoundationDBBaremetalCluster{
+					Status: fdbv1beta2.FoundationDBBaremetalClusterStatus{
 						RunningVersion: "7.1.20",
 					},
 				},
@@ -1900,8 +1900,8 @@ var _ = Describe("status_checks", func() {
 			),
 			Entry(
 				"cluster has more than ten active generations",
-				&fdbv1beta2.FoundationDBCluster{
-					Status: fdbv1beta2.FoundationDBClusterStatus{
+				&fdbv1beta2.FoundationDBBaremetalCluster{
+					Status: fdbv1beta2.FoundationDBBaremetalClusterStatus{
 						RunningVersion: "7.1.20",
 					},
 				},
@@ -1924,8 +1924,8 @@ var _ = Describe("status_checks", func() {
 			),
 			Entry(
 				"cluster's last recovery is 10 seconds ago",
-				&fdbv1beta2.FoundationDBCluster{
-					Status: fdbv1beta2.FoundationDBClusterStatus{
+				&fdbv1beta2.FoundationDBBaremetalCluster{
+					Status: fdbv1beta2.FoundationDBBaremetalClusterStatus{
 						RunningVersion: "7.1.57",
 					},
 				},
@@ -1948,8 +1948,8 @@ var _ = Describe("status_checks", func() {
 				),
 			),
 			Entry("cluster's last recovery is 320 seconds ago",
-				&fdbv1beta2.FoundationDBCluster{
-					Status: fdbv1beta2.FoundationDBClusterStatus{
+				&fdbv1beta2.FoundationDBBaremetalCluster{
+					Status: fdbv1beta2.FoundationDBBaremetalClusterStatus{
 						RunningVersion: "7.1.57",
 					},
 				},

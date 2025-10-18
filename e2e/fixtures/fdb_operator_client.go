@@ -91,7 +91,7 @@ rules:
 - apiGroups:
   - apps.foundationdb.org
   resources:
-  - foundationdbclusters
+  - foundationdbbaremetalclusters
   - foundationdbbackups
   - foundationdbrestores
   verbs:
@@ -112,7 +112,7 @@ rules:
 - apiGroups:
   - apps.foundationdb.org
   resources:
-  - foundationdbclusters/status
+  - foundationdbbaremetalclusters/status
   - foundationdbbackups/status
   - foundationdbrestores/status
   verbs:

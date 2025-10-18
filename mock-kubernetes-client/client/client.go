@@ -172,7 +172,7 @@ func (client *MockClient) setNewFakeClient() {
 	builder.WithScheme(client.scheme)
 	// See: https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.21.0/pkg/client/fake#ClientBuilder.WithStatusSubresource
 	// otherwise the status update/patch calls will fail.
-	builder.WithStatusSubresource(&fdbv1beta2.FoundationDBCluster{})
+	builder.WithStatusSubresource(&fdbv1beta2.FoundationDBBaremetalCluster{})
 	client.fakeClient = builder.Build()
 }
 

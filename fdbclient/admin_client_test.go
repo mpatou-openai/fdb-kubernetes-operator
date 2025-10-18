@@ -160,7 +160,7 @@ var _ = Describe("admin_client_test", func() {
 
 	When("getting the version to run the command", func() {
 		DescribeTable("it should return the correct output",
-			func(cmd cliCommand, cluster *fdbv1beta2.FoundationDBCluster, expected string) {
+			func(cmd cliCommand, cluster *fdbv1beta2.FoundationDBBaremetalCluster, expected string) {
 				Expect(cmd.getVersion(cluster)).To(Equal(expected))
 			},
 			Entry("version is set set",
@@ -172,11 +172,11 @@ var _ = Describe("admin_client_test", func() {
 			),
 			Entry("version is not set and running version is defined",
 				cliCommand{},
-				&fdbv1beta2.FoundationDBCluster{
-					Spec: fdbv1beta2.FoundationDBClusterSpec{
+				&fdbv1beta2.FoundationDBBaremetalCluster{
+					Spec: fdbv1beta2.FoundationDBBaremetalClusterSpec{
 						Version: "7.1.25",
 					},
-					Status: fdbv1beta2.FoundationDBClusterStatus{
+					Status: fdbv1beta2.FoundationDBBaremetalClusterStatus{
 						RunningVersion: "7.1.15",
 					},
 				},
@@ -184,11 +184,11 @@ var _ = Describe("admin_client_test", func() {
 			),
 			Entry("version is not set and running version is  not defined",
 				cliCommand{},
-				&fdbv1beta2.FoundationDBCluster{
-					Spec: fdbv1beta2.FoundationDBClusterSpec{
+				&fdbv1beta2.FoundationDBBaremetalCluster{
+					Spec: fdbv1beta2.FoundationDBBaremetalClusterSpec{
 						Version: "7.1.25",
 					},
-					Status: fdbv1beta2.FoundationDBClusterStatus{
+					Status: fdbv1beta2.FoundationDBBaremetalClusterStatus{
 						RunningVersion: "",
 					},
 				},
@@ -526,7 +526,7 @@ var _ = Describe("admin_client_test", func() {
 
 		JustBeforeEach(func() {
 			cliClient := &cliAdminClient{
-				Cluster: &fdbv1beta2.FoundationDBCluster{
+				Cluster: &fdbv1beta2.FoundationDBBaremetalCluster{
 					ObjectMeta: metav1.ObjectMeta{
 						UID: types.UID("1234"),
 					},
@@ -659,11 +659,11 @@ protocol fdb00b071010000`,
 
 		JustBeforeEach(func() {
 			cliClient := &cliAdminClient{
-				Cluster: &fdbv1beta2.FoundationDBCluster{
-					Spec: fdbv1beta2.FoundationDBClusterSpec{
+				Cluster: &fdbv1beta2.FoundationDBBaremetalCluster{
+					Spec: fdbv1beta2.FoundationDBBaremetalClusterSpec{
 						Version: fdbv1beta2.Versions.NextMajorVersion.String(),
 					},
-					Status: fdbv1beta2.FoundationDBClusterStatus{
+					Status: fdbv1beta2.FoundationDBBaremetalClusterStatus{
 						RunningVersion: fdbv1beta2.Versions.Default.String(),
 					},
 				},
@@ -771,11 +771,11 @@ protocol fdb00b071010000`,
 
 		JustBeforeEach(func() {
 			cliClient := &cliAdminClient{
-				Cluster: &fdbv1beta2.FoundationDBCluster{
-					Spec: fdbv1beta2.FoundationDBClusterSpec{
+				Cluster: &fdbv1beta2.FoundationDBBaremetalCluster{
+					Spec: fdbv1beta2.FoundationDBBaremetalClusterSpec{
 						Version: newVersion,
 					},
-					Status: fdbv1beta2.FoundationDBClusterStatus{
+					Status: fdbv1beta2.FoundationDBBaremetalClusterStatus{
 						RunningVersion: previousVersion,
 					},
 				},

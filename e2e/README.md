@@ -73,8 +73,8 @@ UNIFIED_FDB_IMAGE=docker.io/foundationdb/fdb-kubernetes-monitor
 
 A test cluster can be reused if wanted, e.g. for test cases that load a large amount of data into the cluster.
 This requires to specify the `CLUSTER_NAME` and the `NAMESPACE`, if those values are not specified the test suite will use randomized values.
-_NOTE_ The limitation of this approach is that the test suite will not update the existing `FoundationDBCluster` in the creation step.
-So if you're modifying the `FoundationDBCluster` spec, you have to recreate the cluster.
+_NOTE_ The limitation of this approach is that the test suite will not update the existing `FoundationDBBaremetalCluster` in the creation step.
+So if you're modifying the `FoundationDBBaremetalCluster` spec, you have to recreate the cluster.
 
 ```bash
 CLEANUP=false CLUSTER_NAME=dev-cluster-1 NAMESPACE=dev make -kj -C e2e run

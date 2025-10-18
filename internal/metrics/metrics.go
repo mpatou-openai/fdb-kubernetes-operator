@@ -110,9 +110,9 @@ var (
 	)
 )
 
-// CollectMetrics will collect the metrics for the provided fdbv1beta2.FoundationDBCluster and update all related
+// CollectMetrics will collect the metrics for the provided fdbv1beta2.FoundationDBBaremetalCluster and update all related
 // metrics.
-func CollectMetrics(ch chan<- prometheus.Metric, cluster *fdbv1beta2.FoundationDBCluster) {
+func CollectMetrics(ch chan<- prometheus.Metric, cluster *fdbv1beta2.FoundationDBBaremetalCluster) {
 	addConstMetric := func(desc *prometheus.Desc, t prometheus.ValueType, v float64, lv ...string) {
 		lv = append([]string{cluster.Namespace, cluster.Name}, lv...)
 		ch <- prometheus.MustNewConstMetric(desc, t, v, lv...)
@@ -159,7 +159,7 @@ func CollectMetrics(ch chan<- prometheus.Metric, cluster *fdbv1beta2.FoundationD
 }
 
 func getProcessGroupMetrics(
-	cluster *fdbv1beta2.FoundationDBCluster,
+	cluster *fdbv1beta2.FoundationDBBaremetalCluster,
 ) (map[fdbv1beta2.ProcessClass]map[fdbv1beta2.ProcessGroupConditionType]int, map[fdbv1beta2.ProcessClass]int, map[fdbv1beta2.ProcessClass]int) {
 	metricMap := map[fdbv1beta2.ProcessClass]map[fdbv1beta2.ProcessGroupConditionType]int{}
 	removals := map[fdbv1beta2.ProcessClass]int{}

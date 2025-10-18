@@ -4,12 +4,12 @@
 
 The core of the operator is a reconciliation loop. In this loop, the operator reads the latest cluster spec, compares it to the running state of the cluster, and carries out whatever tasks need to be done to make the running state of the cluster match the desired state as expressed in the cluster spec. If the operator cannot fully reconcile the cluster in a single pass, it will try the reconciliation again. This can occur for a number of reasons: operations that require asynchronous work, error conditions, operations that are disabled, and so on.
 
-When you make a change to the cluster spec, it will increment the `generation` field in the cluster metadata. Once reconciliation completes, the `generations.reconciled` field in the cluster status will be updated to reflect the last generation that we have reconciled. You can compare these two fields to determine whether your changes have been fully applied. You can also see the current generation and reconciled generation in the output of `kubectl get foundationdbcluster`.
+When you make a change to the cluster spec, it will increment the `generation` field in the cluster metadata. Once reconciliation completes, the `generations.reconciled` field in the cluster status will be updated to reflect the last generation that we have reconciled. You can compare these two fields to determine whether your changes have been fully applied. You can also see the current generation and reconciled generation in the output of `kubectl get foundationdbbaremetalcluster`.
 
 To run the operator in your environment, you need to install the controller and the CRDs:
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/FoundationDB/fdb-kubernetes-operator/main/config/crd/bases/apps.foundationdb.org_foundationdbclusters.yaml
+kubectl apply -f https://raw.githubusercontent.com/FoundationDB/fdb-kubernetes-operator/main/config/crd/bases/apps.foundationdb.org_foundationdbbaremetalclusters.yaml
 kubectl apply -f https://raw.githubusercontent.com/FoundationDB/fdb-kubernetes-operator/main/config/crd/bases/apps.foundationdb.org_foundationdbbackups.yaml
 kubectl apply -f https://raw.githubusercontent.com/FoundationDB/fdb-kubernetes-operator/main/config/crd/bases/apps.foundationdb.org_foundationdbrestores.yaml
 kubectl apply -f https://raw.githubusercontent.com/foundationdb/fdb-kubernetes-operator/main/config/samples/deployment.yaml
@@ -29,7 +29,7 @@ To start with, we are going to be creating a cluster with the following configur
 
 ```yaml
 apiVersion: apps.foundationdb.org/v1beta2
-kind: FoundationDBCluster
+kind: FoundationDBBaremetalCluster
 metadata:
   name: sample-cluster
 spec:
@@ -39,7 +39,7 @@ spec:
 This will create a cluster with 3 storage processes, 4 log processes, and 7 stateless processes.
 Each `fdbserver` process will be in a separate pod, and the pods will have names of the form `sample-cluster-$role-$n`, where `$n` is the process group ID and `$role` is the role for the process.
 
-You can run `kubectl get foundationdbcluster sample-cluster` to check the progress of reconciliation.
+You can run `kubectl get foundationdbbaremetalcluster sample-cluster` to check the progress of reconciliation.
 Once the reconciled generation appears in this output, the cluster should be up and ready.
 After creating the cluster, you can connect to the cluster by running `kubectl exec -it sample-cluster-log-1 -- fdbcli`.
 

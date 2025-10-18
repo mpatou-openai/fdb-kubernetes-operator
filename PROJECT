@@ -2,7 +2,7 @@ domain: foundationdb.org
 repo: github.com/FoundationDB/fdb-kubernetes-operator
 resources:
 - group: apps
-  kind: FoundationDBCluster
+  kind: FoundationDBBaremetalCluster
   version: v1beta1
 - group: apps
   kind: FoundationDBRestore
@@ -11,7 +11,7 @@ resources:
   kind: FoundationDBBackup
   version: v1beta1
 - group: apps
-  kind: FoundationDBCluster
+  kind: FoundationDBBaremetalCluster
   version: v1beta2
 - group: apps
   kind: FoundationDBRestore

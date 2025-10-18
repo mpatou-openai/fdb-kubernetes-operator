@@ -136,7 +136,7 @@ var _ = Describe("ControllerName", func() {
 
 ### Naming Conventions
 
-- **Types**: PascalCase (e.g., `FoundationDBCluster`)
+- **Types**: PascalCase (e.g., `FoundationDBBaremetalCluster`)
 - **Functions**: PascalCase for exported, camelCase for internal
 - **Constants**: PascalCase or UPPER_SNAKE_CASE for public constants
 - **Files**: snake_case.go
@@ -177,7 +177,7 @@ ls controllers/*_controller.go
 
 **Controller Structure**:
 ```go
-type FoundationDBClusterReconciler struct {
+type FoundationDBBaremetalClusterReconciler struct {
     client.Client
     Log                     logr.Logger
     Recorder                record.EventRecorder
@@ -185,7 +185,7 @@ type FoundationDBClusterReconciler struct {
     PodLifecycleManager     podmanager.PodLifecycleManager
 }
 
-func (r *FoundationDBClusterReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+func (r *FoundationDBBaremetalClusterReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
     // Implementation
 }
 ```
@@ -250,7 +250,7 @@ make clean all  # Generate new CRD structs.
 kubectl logs -f -l app=fdb-kubernetes-operator-controller-manager --container=manager
 
 # Check cluster status
-kubectl get foundationdbcluster test-cluster -o yaml
+kubectl get foundationdbbaremetalcluster test-cluster -o yaml
 
 # Access FDB CLI
 kubectl fdb exec -it test-cluster -- fdbcli

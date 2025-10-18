@@ -8,7 +8,7 @@
 
 ## Background
 
-The operator is currently able to detect failures of Pods and replace them if required, the replacement is happening based on the [conditions that need replacement](https://github.com/FoundationDB/fdb-kubernetes-operator/blob/v1.14.0/api/v1beta2/foundationdbcluster_types.go#L65).
+The operator is currently able to detect failures of Pods and replace them if required, the replacement is happening based on the [conditions that need replacement](https://github.com/FoundationDB/fdb-kubernetes-operator/blob/v1.14.0/api/v1beta2/foundationdbbaremetalcluster_types.go#L65).
 One of the missing pieces in failure mitigation is to evict Pods from tainted Nodes.
 In Kubernetes it's common to use [taints](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration) to indicate potential problems with a node or planned maintenance.
 This information could be consumed by the operator to proactively replace Pods that are running on Nodes with a given set of taints.
@@ -76,11 +76,11 @@ We need to make the following four types of changes:
 
 **Detect Node taint and change ProcessGroup condition.**  We can extend the existing `validateProcessGroup()` function in `update_status` reconciler to detect if a Pod is running on a tainted Node and mark the ProcessGroup's taint-related condition accordingly.
 
-**Status of ProcessGroup taint-related condition.** We will add two [ProcessGroupConditionType](https://github.com/FoundationDB/fdb-kubernetes-operator/blob/main/api/v1beta2/foundationdbcluster_types.go#L673):
+**Status of ProcessGroup taint-related condition.** We will add two [ProcessGroupConditionType](https://github.com/FoundationDB/fdb-kubernetes-operator/blob/main/api/v1beta2/foundationdbbaremetalcluster_types.go#L673):
 - `NodeTaintDetected` represents a ProcessGroup Node is tainted, but not long enough to replace it.
 - `NodeTaintReplacing` represents a ProcessGroup whose Node has been tainted for longer-than-configured time and the ProcessGroup should be replaced.
 
-**Replace ProcessGroups with `NodeTaintReplacing` condition.** We can extend the existing replacement logic to replace ProcessGroups with `NodeTaintReplacing` condition. We can do this by adding the `NodeTaintReplacing` condition to [`conditionsThatNeedReplacement` list](https://github.com/FoundationDB/fdb-kubernetes-operator/blob/d38d6bc7abf7764215976b75d581c933280389f8/api/v1beta2/foundationdbcluster_types.go#L65-L67)
+**Replace ProcessGroups with `NodeTaintReplacing` condition.** We can extend the existing replacement logic to replace ProcessGroups with `NodeTaintReplacing` condition. We can do this by adding the `NodeTaintReplacing` condition to [`conditionsThatNeedReplacement` list](https://github.com/FoundationDB/fdb-kubernetes-operator/blob/d38d6bc7abf7764215976b75d581c933280389f8/api/v1beta2/foundationdbbaremetalcluster_types.go#L65-L67)
 
 
 ## Limitations

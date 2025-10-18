@@ -37,7 +37,7 @@ import (
 // database.
 type realLockClient struct {
 	// The cluster we are managing locks for.
-	cluster *fdbv1beta2.FoundationDBCluster
+	cluster *fdbv1beta2.FoundationDBBaremetalCluster
 
 	// Whether we should disable locking completely.
 	disableLocks bool
@@ -390,7 +390,7 @@ func (err invalidLockValue) Error() string {
 
 // NewRealLockClient creates a lock client.
 func NewRealLockClient(
-	cluster *fdbv1beta2.FoundationDBCluster,
+	cluster *fdbv1beta2.FoundationDBBaremetalCluster,
 	log logr.Logger,
 ) (fdbadminclient.LockClient, error) {
 	if !cluster.ShouldUseLocks() {

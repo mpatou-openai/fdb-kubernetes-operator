@@ -40,7 +40,7 @@ import (
 
 // AdminClient provides a mock implementation of the cluster admin interface
 type AdminClient struct {
-	Cluster                                  *fdbv1beta2.FoundationDBCluster
+	Cluster                                  *fdbv1beta2.FoundationDBBaremetalCluster
 	KubeClient                               client.Client
 	DatabaseConfiguration                    *fdbv1beta2.DatabaseConfiguration
 	ExcludedAddresses                        map[string]fdbv1beta2.None
@@ -88,7 +88,7 @@ var adminClientMutex sync.Mutex
 
 // NewMockAdminClient creates an admin client for a cluster.
 func NewMockAdminClient(
-	cluster *fdbv1beta2.FoundationDBCluster,
+	cluster *fdbv1beta2.FoundationDBBaremetalCluster,
 	kubeClient client.Client,
 ) (fdbadminclient.AdminClient, error) {
 	return NewMockAdminClientUncast(cluster, kubeClient)
@@ -98,7 +98,7 @@ func NewMockAdminClient(
 // nolint:unparam
 // is required because we always return a nil error
 func NewMockAdminClientUncast(
-	cluster *fdbv1beta2.FoundationDBCluster,
+	cluster *fdbv1beta2.FoundationDBBaremetalCluster,
 	kubeClient client.Client,
 ) (*AdminClient, error) {
 	adminClientMutex.Lock()

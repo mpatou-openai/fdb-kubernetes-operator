@@ -26,11 +26,11 @@ import (
 	"github.com/go-logr/logr"
 )
 
-// ChangeCoordinators will change the coordinators and set the new connection string on the FoundationDBCluster resource.
+// ChangeCoordinators will change the coordinators and set the new connection string on the FoundationDBBaremetalCluster resource.
 func ChangeCoordinators(
 	logger logr.Logger,
 	adminClient fdbadminclient.AdminClient,
-	cluster *fdbv1beta2.FoundationDBCluster,
+	cluster *fdbv1beta2.FoundationDBBaremetalCluster,
 	status *fdbv1beta2.FoundationDBStatus,
 ) error {
 	coordinators, err := SelectCoordinators(logger, cluster, status)
@@ -55,7 +55,7 @@ func ChangeCoordinators(
 // SelectCoordinators will return a set of new coordinators.
 func SelectCoordinators(
 	logger logr.Logger,
-	cluster *fdbv1beta2.FoundationDBCluster,
+	cluster *fdbv1beta2.FoundationDBBaremetalCluster,
 	status *fdbv1beta2.FoundationDBStatus,
 ) ([]fdbv1beta2.ProcessAddress, error) {
 	var coordinatorAddresses []fdbv1beta2.ProcessAddress
@@ -65,7 +65,7 @@ func SelectCoordinators(
 
 // GetCoordinatorAddress returns the coordinator address.
 func GetCoordinatorAddress(
-	cluster *fdbv1beta2.FoundationDBCluster,
+	cluster *fdbv1beta2.FoundationDBBaremetalCluster,
 ) fdbv1beta2.ProcessAddress {
 	var address fdbv1beta2.ProcessAddress
 

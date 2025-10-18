@@ -29,7 +29,7 @@ import (
 )
 
 func (factory *Factory) ensureFdbClusterExists(
-	clusterSpec *fdbv1beta2.FoundationDBCluster,
+	clusterSpec *fdbv1beta2.FoundationDBBaremetalCluster,
 	config *ClusterConfig,
 ) (*FdbCluster, error) {
 	clusterStatus, err := factory.getClusterStatus(clusterSpec.Name, clusterSpec.Namespace)

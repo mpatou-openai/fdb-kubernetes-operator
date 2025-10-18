@@ -31,7 +31,7 @@ import (
 // LockClient provides a mock client for managing operation locks.
 type LockClient struct {
 	// cluster stores the cluster this client is working with.
-	cluster *fdbv1beta2.FoundationDBCluster
+	cluster *fdbv1beta2.FoundationDBBaremetalCluster
 
 	// owner stores the deny list for lock acquisition.
 	denyList []string
@@ -96,12 +96,12 @@ var lockClientCache = make(map[string]*LockClient)
 var lockClientMutex sync.Mutex
 
 // NewMockLockClient creates a mock lock client.
-func NewMockLockClient(cluster *fdbv1beta2.FoundationDBCluster) (fdbadminclient.LockClient, error) {
+func NewMockLockClient(cluster *fdbv1beta2.FoundationDBBaremetalCluster) (fdbadminclient.LockClient, error) {
 	return NewMockLockClientUncast(cluster), nil
 }
 
 // NewMockLockClientUncast creates a mock lock client.
-func NewMockLockClientUncast(cluster *fdbv1beta2.FoundationDBCluster) *LockClient {
+func NewMockLockClientUncast(cluster *fdbv1beta2.FoundationDBBaremetalCluster) *LockClient {
 	lockClientMutex.Lock()
 	defer lockClientMutex.Unlock()
 

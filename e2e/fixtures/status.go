@@ -167,7 +167,7 @@ func (fdbCluster *FdbCluster) runCommandInOperatorWithoutRetry(
 	}
 
 	var stdout, stderr string
-	// If a cluster is currently updated the update of the FoundationDBCluster status is done async. That means there is
+	// If a cluster is currently updated the update of the FoundationDBBaremetalCluster status is done async. That means there is
 	// a timespan where the cluster is already upgraded but the status.RunningVersion is still pointing to the old version.
 	// In order to catch those cases we try first the binary for the running version and if that doesn't work (an error
 	// is returned) we will try the version for the spec. This should reduce some test flakiness.
@@ -419,7 +419,7 @@ func (fdbCluster *FdbCluster) HasTLSEnabled() bool {
 	return false
 }
 
-// GetCoordinators returns the Pods of the FoundationDBCluster that are having the coordinator role.
+// GetCoordinators returns the Pods of the FoundationDBBaremetalCluster that are having the coordinator role.
 func (fdbCluster *FdbCluster) GetCoordinators() {
 }
 

@@ -13,12 +13,12 @@ This Document documents the types introduced by the FoundationDB Operator to be 
 * [ContainerOverrides](#containeroverrides)
 * [CoordinatorSelectionSetting](#coordinatorselectionsetting)
 * [CrashLoopContainerObject](#crashloopcontainerobject)
-* [FoundationDBCluster](#foundationdbcluster)
-* [FoundationDBClusterAutomationOptions](#foundationdbclusterautomationoptions)
-* [FoundationDBClusterFaultDomain](#foundationdbclusterfaultdomain)
-* [FoundationDBClusterList](#foundationdbclusterlist)
-* [FoundationDBClusterSpec](#foundationdbclusterspec)
-* [FoundationDBClusterStatus](#foundationdbclusterstatus)
+* [FoundationDBBaremetalCluster](#foundationdbbaremetalcluster)
+* [FoundationDBBaremetalClusterAutomationOptions](#foundationdbbaremetalclusterautomationoptions)
+* [FoundationDBBaremetalClusterFaultDomain](#foundationdbbaremetalclusterfaultdomain)
+* [FoundationDBBaremetalClusterList](#foundationdbbaremetalclusterlist)
+* [FoundationDBBaremetalClusterSpec](#foundationdbbaremetalclusterspec)
+* [FoundationDBBaremetalClusterStatus](#foundationdbbaremetalclusterstatus)
 * [LabelConfig](#labelconfig)
 * [LockDenyListEntry](#lockdenylistentry)
 * [LockOptions](#lockoptions)
@@ -167,21 +167,21 @@ FaultDomain represents the FaultDomain of a process group
 
 [Back to TOC](#table-of-contents)
 
-## FoundationDBCluster
+## FoundationDBBaremetalCluster
 
-FoundationDBCluster is the Schema for the foundationdbclusters API
+FoundationDBBaremetalCluster is the Schema for the foundationdbbaremetalclusters API
 
 | Field | Description | Scheme | Required |
 | ----- | ----------- | ------ | -------- |
 | metadata |  | [metav1.ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#objectmeta-v1-meta) | false |
-| spec |  | [FoundationDBClusterSpec](#foundationdbclusterspec) | false |
-| status |  | [FoundationDBClusterStatus](#foundationdbclusterstatus) | false |
+| spec |  | [FoundationDBBaremetalClusterSpec](#foundationdbbaremetalclusterspec) | false |
+| status |  | [FoundationDBBaremetalClusterStatus](#foundationdbbaremetalclusterstatus) | false |
 
 [Back to TOC](#table-of-contents)
 
-## FoundationDBClusterAutomationOptions
+## FoundationDBBaremetalClusterAutomationOptions
 
-FoundationDBClusterAutomationOptions provides flags for enabling or disabling operations that can be performed on a cluster.
+FoundationDBBaremetalClusterAutomationOptions provides flags for enabling or disabling operations that can be performed on a cluster.
 
 | Field | Description | Scheme | Required |
 | ----- | ----------- | ------ | -------- |
@@ -208,9 +208,9 @@ FoundationDBClusterAutomationOptions provides flags for enabling or disabling op
 
 [Back to TOC](#table-of-contents)
 
-## FoundationDBClusterFaultDomain
+## FoundationDBBaremetalClusterFaultDomain
 
-FoundationDBClusterFaultDomain describes the fault domain that a cluster is replicated across.
+FoundationDBBaremetalClusterFaultDomain describes the fault domain that a cluster is replicated across.
 
 | Field | Description | Scheme | Required |
 | ----- | ----------- | ------ | -------- |
@@ -222,20 +222,20 @@ FoundationDBClusterFaultDomain describes the fault domain that a cluster is repl
 
 [Back to TOC](#table-of-contents)
 
-## FoundationDBClusterList
+## FoundationDBBaremetalClusterList
 
-FoundationDBClusterList contains a list of FoundationDBCluster objects
+FoundationDBBaremetalClusterList contains a list of FoundationDBBaremetalCluster objects
 
 | Field | Description | Scheme | Required |
 | ----- | ----------- | ------ | -------- |
 | metadata |  | [metav1.ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#listmeta-v1-meta) | false |
-| items |  | [][FoundationDBCluster](#foundationdbcluster) | true |
+| items |  | [][FoundationDBBaremetalCluster](#foundationdbbaremetalcluster) | true |
 
 [Back to TOC](#table-of-contents)
 
-## FoundationDBClusterSpec
+## FoundationDBBaremetalClusterSpec
 
-FoundationDBClusterSpec defines the desired state of a cluster.
+FoundationDBBaremetalClusterSpec defines the desired state of a cluster.
 
 | Field | Description | Scheme | Required |
 | ----- | ----------- | ------ | -------- |
@@ -245,7 +245,7 @@ FoundationDBClusterSpec defines the desired state of a cluster.
 | processCounts | ProcessCounts defines the number of processes to configure for each process class. You can generally omit this, to allow the operator to infer the process counts based on the database configuration. | [ProcessCounts](#processcounts) | false |
 | seedConnectionString | SeedConnectionString provides an additional connection string. This connection string will be used in addition to the connection string defined under cluster.Status.ConnectionString to connect to the cluster. This setting can be used to create a multi-region cluster or to recover a cluster if it is out of sync. | string | false |
 | partialConnectionString | PartialConnectionString provides a way to specify part of the connection string (e.g. the database name and coordinator generation) without specifying the entire string. This does not allow for setting the coordinator IPs. If `SeedConnectionString` is set, `PartialConnectionString` will have no effect. They cannot be used together. | [ConnectionString](#connectionstring) | false |
-| faultDomain | FaultDomain defines the rules for what fault domain to replicate across. | [FoundationDBClusterFaultDomain](#foundationdbclusterfaultdomain) | false |
+| faultDomain | FaultDomain defines the rules for what fault domain to replicate across. | [FoundationDBBaremetalClusterFaultDomain](#foundationdbbaremetalclusterfaultdomain) | false |
 | processGroupsToRemove | ProcessGroupsToRemove defines the process groups that we should remove from the cluster. This list contains the process group IDs. | [][ProcessGroupID](#processgroupid) | false |
 | processGroupsToRemoveWithoutExclusion | ProcessGroupsToRemoveWithoutExclusion defines the process groups that we should remove from the cluster without excluding them. This list contains the process group IDs.  This should be used for cases where a pod does not have an IP address and you want to remove it and destroy its volume without confirming the data is fully replicated. | [][ProcessGroupID](#processgroupid) | false |
 | configMap | ConfigMap allows customizing the config map the operator creates. | *[corev1.ConfigMap](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#configmap-v1-core) | false |
@@ -256,7 +256,7 @@ FoundationDBClusterSpec defines the desired state of a cluster.
 | logGroup | LogGroup defines the log group to use for the trace logs for the cluster. | string | false |
 | dataCenter | DataCenter defines the data center where these processes are running. | string | false |
 | dataHall | DataHall defines the data hall where these processes are running. | string | false |
-| automationOptions | AutomationOptions defines customization for enabling or disabling certain operations in the operator. | [FoundationDBClusterAutomationOptions](#foundationdbclusterautomationoptions) | false |
+| automationOptions | AutomationOptions defines customization for enabling or disabling certain operations in the operator. | [FoundationDBBaremetalClusterAutomationOptions](#foundationdbbaremetalclusterautomationoptions) | false |
 | processGroupIDPrefix | ProcessGroupIDPrefix defines a prefix to append to the process group IDs in the locality fields.  This must be a valid Kubernetes label value. See https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set for more details on that. | string | false |
 | lockOptions | LockOptions allows customizing how we manage locks for global operations. | [LockOptions](#lockoptions) | false |
 | routing | Routing defines the configuration for routing to our pods. | [RoutingConfig](#routingconfig) | false |
@@ -270,14 +270,14 @@ FoundationDBClusterSpec defines the desired state of a cluster.
 | coordinatorSelection | CoordinatorSelection defines which process classes are eligible for coordinator selection. If empty all stateful processes classes are equally eligible. A higher priority means that a process class is preferred over another process class. If the FoundationDB cluster is spans across multiple Kubernetes clusters or DCs the CoordinatorSelection must match in all FoundationDB cluster resources otherwise the coordinator selection process could conflict. | [][CoordinatorSelectionSetting](#coordinatorselectionsetting) | false |
 | labels | LabelConfig allows customizing labels used by the operator. | [LabelConfig](#labelconfig) | false |
 | useExplicitListenAddress | UseExplicitListenAddress determines if we should add a listen address that is separate from the public address. **Deprecated: This setting will be removed in the next major release.** | *bool | false |
-| imageType | ImageType defines the image type that should be used for the FoundationDBCluster deployment. When the type is set to \"unified\" the deployment will use the new fdb-kubernetes-monitor. Otherwise the main container and the sidecar container will use different images. Default: split | *[ImageType](#imagetype) | false |
+| imageType | ImageType defines the image type that should be used for the FoundationDBBaremetalCluster deployment. When the type is set to \"unified\" the deployment will use the new fdb-kubernetes-monitor. Otherwise the main container and the sidecar container will use different images. Default: split | *[ImageType](#imagetype) | false |
 | maxZonesWithUnavailablePods | MaxZonesWithUnavailablePods defines the maximum number of zones that can have unavailable pods during the update process. When unset, there is no limit to the  number of zones with unavailable pods. | *int | false |
 
 [Back to TOC](#table-of-contents)
 
-## FoundationDBClusterStatus
+## FoundationDBBaremetalClusterStatus
 
-FoundationDBClusterStatus defines the observed state of FoundationDBCluster
+FoundationDBBaremetalClusterStatus defines the observed state of FoundationDBBaremetalCluster
 
 | Field | Description | Scheme | Required |
 | ----- | ----------- | ------ | -------- |

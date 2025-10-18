@@ -34,15 +34,15 @@ import (
 
 // This file contains fixtures to set up HA configurations.
 const (
-	// PrimaryID is the suffix for the primary FoundationDBCluster
+	// PrimaryID is the suffix for the primary FoundationDBBaremetalCluster
 	PrimaryID = "primary"
-	// RemoteID is the suffix for the remote FoundationDBCluster
+	// RemoteID is the suffix for the remote FoundationDBBaremetalCluster
 	RemoteID = "remote"
-	// PrimarySatelliteID is the suffix for the primary satellite FoundationDBCluster
+	// PrimarySatelliteID is the suffix for the primary satellite FoundationDBBaremetalCluster
 	PrimarySatelliteID = "primary-sat"
-	// RemoteSatelliteID is the suffix for the remote satellite FoundationDBCluster
+	// RemoteSatelliteID is the suffix for the remote satellite FoundationDBBaremetalCluster
 	RemoteSatelliteID = "remote-sat"
-	// SatelliteID is the suffix for the satellite FoundationDBCluster
+	// SatelliteID is the suffix for the satellite FoundationDBBaremetalCluster
 	SatelliteID = "sat"
 )
 
@@ -87,13 +87,13 @@ type ClusterConfig struct {
 	Performance bool
 	// If enabled the debug images will be used for this test case.
 	DebugSymbols bool
-	// UseMaintenanceMode if enabled the FoundationDBCluster resource will enable the maintenance mode.
+	// UseMaintenanceMode if enabled the FoundationDBBaremetalCluster resource will enable the maintenance mode.
 	UseMaintenanceMode bool
 	// EnableTLS when set this value will be used to enable/disable TLS, the default is true.
 	EnableTLS *bool
-	// UseLocalityBasedExclusions if enabled the FoundationDBCluster resource will enable the locality based exclusions.
+	// UseLocalityBasedExclusions if enabled the FoundationDBBaremetalCluster resource will enable the locality based exclusions.
 	UseLocalityBasedExclusions *bool
-	// UseDNS if enabled the FoundationDBCluster resource will enable the DNS feature.
+	// UseDNS if enabled the FoundationDBBaremetalCluster resource will enable the DNS feature.
 	UseDNS *bool
 	// If enabled the cluster will be setup with the unified image.
 	UseUnifiedImage *bool
@@ -109,9 +109,9 @@ type ClusterConfig struct {
 	MachineCount int
 	// This is also used for calculating the number of Pods.
 	DisksPerMachine int
-	// StorageServerPerPod defines the value that is set in the FoundationDBClusterSpec for this setting.
+	// StorageServerPerPod defines the value that is set in the FoundationDBBaremetalClusterSpec for this setting.
 	StorageServerPerPod int
-	// LogServersPerPod defines the value that is set in the FoundationDBClusterSpec for this setting.
+	// LogServersPerPod defines the value that is set in the FoundationDBBaremetalClusterSpec for this setting.
 	LogServersPerPod int
 	// MemoryPerPodInGb defines the default memory for pods created by this cluster. If more than one process is running inside the
 	// pod the memory size will be increased proportionally. If not set, will default to 8Gi
@@ -188,7 +188,7 @@ func (config *ClusterConfig) SetDefaults(factory *Factory) {
 			}
 
 			log.Println(
-				"FoundationDBCluster",
+				"FoundationDBBaremetalCluster",
 				fdbCluster.Name(),
 				"successfully created in",
 				fdbCluster.Namespace(),

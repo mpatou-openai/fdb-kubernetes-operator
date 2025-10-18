@@ -259,7 +259,7 @@ func StartManager(
 	scheme *runtime.Scheme,
 	operatorOpts Options,
 	logOpts zap.Options,
-	clusterReconciler *controllers.FoundationDBClusterReconciler,
+	clusterReconciler *controllers.FoundationDBBaremetalClusterReconciler,
 	logr logr.Logger) (manager.Manager, *os.File) {
 	if operatorOpts.PrintVersion {
 		fmt.Printf("version: %s\n", operatorVersion)
@@ -325,7 +325,7 @@ func StartManager(
 
 	if clusterReconciler != nil {
 		clusterReconciler.Client = mgr.GetClient()
-		clusterReconciler.Recorder = mgr.GetEventRecorderFor("foundationdbcluster-controller")
+		clusterReconciler.Recorder = mgr.GetEventRecorderFor("foundationdbbaremetalcluster-controller")
 		clusterReconciler.GetTimeout = operatorOpts.GetTimeout
 		clusterReconciler.PostTimeout = operatorOpts.PostTimeout
 
@@ -334,7 +334,7 @@ func StartManager(
 		clusterReconciler.Namespace = operatorOpts.WatchNamespace
 
 		if err := clusterReconciler.SetupWithManager(mgr, operatorOpts.MaxConcurrentReconciles); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "FoundationDBCluster")
+			setupLog.Error(err, "unable to create controller", "controller", "FoundationDBBaremetalCluster")
 			os.Exit(1)
 		}
 	}

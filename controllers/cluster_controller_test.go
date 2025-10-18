@@ -37,10 +37,10 @@ import (
 
 var firstStorageIndex = 13
 
-// reloadCluster reloads FoundationDBCluster object info to its local copy.
-// It's necessary in unit test when reconciler changes FoundationDBCluster object but the local's state is not updated.
-// We reloadCluster to bring client state consistent with the latest FoundationDBCluster object
-func reloadCluster(cluster *fdbv1beta2.FoundationDBCluster) (int64, error) {
+// reloadCluster reloads FoundationDBBaremetalCluster object info to its local copy.
+// It's necessary in unit test when reconciler changes FoundationDBBaremetalCluster object but the local's state is not updated.
+// We reloadCluster to bring client state consistent with the latest FoundationDBBaremetalCluster object
+func reloadCluster(cluster *fdbv1beta2.FoundationDBBaremetalCluster) (int64, error) {
 	generations, err := reloadClusterGenerations(cluster)
 	if generations.HasPendingRemoval > 0 {
 		return 0, err
@@ -49,10 +49,10 @@ func reloadCluster(cluster *fdbv1beta2.FoundationDBCluster) (int64, error) {
 }
 
 func reloadClusterGenerations(
-	cluster *fdbv1beta2.FoundationDBCluster,
+	cluster *fdbv1beta2.FoundationDBBaremetalCluster,
 ) (fdbv1beta2.ClusterGenerationStatus, error) {
 	key := client.ObjectKeyFromObject(cluster)
-	*cluster = fdbv1beta2.FoundationDBCluster{}
+	*cluster = fdbv1beta2.FoundationDBBaremetalCluster{}
 	err := k8sClient.Get(context.TODO(), key, cluster)
 	if err != nil {
 		return fdbv1beta2.ClusterGenerationStatus{}, err
@@ -60,7 +60,7 @@ func reloadClusterGenerations(
 	return cluster.Status.Generations, err
 }
 
-func getListOptions(cluster *fdbv1beta2.FoundationDBCluster) []client.ListOption {
+func getListOptions(cluster *fdbv1beta2.FoundationDBBaremetalCluster) []client.ListOption {
 	return []client.ListOption{
 		client.InNamespace("my-ns"),
 		client.MatchingLabels(map[string]string{
@@ -76,7 +76,7 @@ func sortPodsByName(pods *corev1.PodList) {
 }
 
 var _ = Describe("cluster_controller", func() {
-	var cluster *fdbv1beta2.FoundationDBCluster
+	var cluster *fdbv1beta2.FoundationDBBaremetalCluster
 
 	BeforeEach(func() {
 		cluster = internal.CreateDefaultCluster()

@@ -55,7 +55,7 @@ var _ fdbLibClient = &realFdbLibClient{}
 
 // realFdbLibClient represents the actual FDB client that will interact with FDB.
 type realFdbLibClient struct {
-	cluster *fdbv1beta2.FoundationDBCluster
+	cluster *fdbv1beta2.FoundationDBBaremetalCluster
 	logger  logr.Logger
 }
 

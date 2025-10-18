@@ -32,7 +32,7 @@ Depending on the cluster size this can require a quota that is has double the ca
 
 The FoundationDB Kubernetes operator supports to make use of the [maintenance mode](https://github.com/apple/foundationdb/wiki/Maintenance-mode) in FoundationDB.
 Using the maintenance mode in FoundationDB will reduce the data distribution and disruption when Storage Pods must be updated.
-The following addition to the `FoundationDBCluster` resource will enable the maintenance mode for this cluster:
+The following addition to the `FoundationDBBaremetalCluster` resource will enable the maintenance mode for this cluster:
 
 ```yaml
 spec:

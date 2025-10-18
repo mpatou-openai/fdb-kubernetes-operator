@@ -38,10 +38,10 @@ The design is split into two main parts of the deployment: configure the localit
 The `three_data_hall` deployment requires the `locality_data_hall` locality to be set and the `three_datacenter` requires the `locality_dcid` to be set.
 There must be at least and at most 3 different values for these localities.
 To full fill the requirements there must be at least two different `locality_zone`s per `data_hall`/`datacenter`.
-The `locality_zone` can be configured with [FoundationDBClusterFaultDomain](https://github.com/FoundationDB/fdb-kubernetes-operator/blob/master/docs/cluster_spec.md#foundationdbclusterfaultdomain).
-In addition to that the user can configure additional variables that the sidecar will use for substitution in the [FoundationDBClusterSpec](https://github.com/FoundationDB/fdb-kubernetes-operator/blob/master/docs/cluster_spec.md#foundationdbclusterspec) with the `sidecarVariables` list.
+The `locality_zone` can be configured with [FoundationDBBaremetalClusterFaultDomain](https://github.com/FoundationDB/fdb-kubernetes-operator/blob/master/docs/cluster_spec.md#foundationdbbaremetalclusterfaultdomain).
+In addition to that the user can configure additional variables that the sidecar will use for substitution in the [FoundationDBBaremetalClusterSpec](https://github.com/FoundationDB/fdb-kubernetes-operator/blob/master/docs/cluster_spec.md#foundationdbbaremetalclusterspec) with the `sidecarVariables` list.
 The current implementation would allow to set `dataHall: $AZ` and in `sidecarVariables` we would list `AZ` to define the `locality_data_hall` based on an environment variable that will be replaced by the sidecar with the actual value.
-Instead of having these different mechanisms spread across different settings I propose to have a new `localities` setting in the `FoundationDBClusterSpec`.
+Instead of having these different mechanisms spread across different settings I propose to have a new `localities` setting in the `FoundationDBBaremetalClusterSpec`.
 The key will always be prefixed with `locality_`:
 
 ```yaml
@@ -63,7 +63,7 @@ If multiple fields of the `value`, `envValue` or `topologyKey` are set the follo
 1. `topologyKey`
 
 The `topologyKey` will be used for the `PodAntiAffinity`.
-The `FoundationDBClusterFaultDomain` will be deprecated, the `zoneCount` and `zoneIndex` will be read from the new [multi-cluster field](https://github.com/FoundationDB/fdb-kubernetes-operator/blob/master/docs/design/plugin_multi_fdb_support.md#proposed-design).
+The `FoundationDBBaremetalClusterFaultDomain` will be deprecated, the `zoneCount` and `zoneIndex` will be read from the new [multi-cluster field](https://github.com/FoundationDB/fdb-kubernetes-operator/blob/master/docs/design/plugin_multi_fdb_support.md#proposed-design).
 The current assumption is that we will implement the multi-DC support before we implement this design, if not we can implement only the required CRD change.
 For all `localities` that define a `envValue` we would add the key to the `--substitute-variable` flag.
 For `topologyKey` we have to modify the sidecar to allow it to read labels from Kubernetes nodes (see [Related Links](#related-links)) and pass that information to the according new flag.
@@ -96,7 +96,7 @@ If a regional cluster contains more than 3 AZ and a user only want to use 3 spec
 ```
 
 The `NodeAffinity` must be set by the user and the operator doesn't take any action to automatically set the value.
-The user would only require to create one `FoundationDBCluster` and set the `redundancy_mode` to `three_data_hall` or `three_datacenter`.
+The user would only require to create one `FoundationDBBaremetalCluster` and set the `redundancy_mode` to `three_data_hall` or `three_datacenter`.
 If a user doesn't provide the required localities the operator will emit an event or block the upgrade if we have a `ValidationWebHook`.
 
 #### Multiple Kubernetes clusters
@@ -114,7 +114,7 @@ The initial cluster spec could look like this:
 
 ```yaml
 apiVersion: apps.foundationdb.org/v1beta1
-kind: FoundationDBCluster
+kind: FoundationDBBaremetalCluster
 metadata:
   labels:
     cluster-group: test-cluster
@@ -130,11 +130,11 @@ spec:
 ```
 
 With this configuration we will use the default fault domain the Kubernetes nodes as `locality_zone`.
-When the cluster is reconciled we can create the `FoundationDBCluster` spec in the other two Kubernetes clusters and set the `redundancy_mode: "three_data_hall"`:
+When the cluster is reconciled we can create the `FoundationDBBaremetalCluster` spec in the other two Kubernetes clusters and set the `redundancy_mode: "three_data_hall"`:
 
 ```yaml
 apiVersion: apps.foundationdb.org/v1beta1
-kind: FoundationDBCluster
+kind: FoundationDBBaremetalCluster
 metadata:
   labels:
     cluster-group: test-cluster
@@ -150,7 +150,7 @@ spec:
     value: $az
 ```
 
-The processes in the other Kubernetes clusters will join the current `FoundationDBCluster`.
+The processes in the other Kubernetes clusters will join the current `FoundationDBBaremetalCluster`.
 Once enough processes joined the cluster one of the operator will select 9 Coordinators span across 3 `data_halls`.
 
 ### Coordinator selection
@@ -161,7 +161,7 @@ We will select 9 coordinators to survive a `data_hall` or `datacenter` failure a
 The selection happens in the [cluster_controller](https://github.com/FoundationDB/fdb-kubernetes-operator/blob/master/controllers/cluster_controller.go#L1283-L1292) with a small extension we can support the coordinator selection:
 
 ```go
-func getHardLimits(cluster *fdbtypes.FoundationDBCluster) map[string]int {
+func getHardLimits(cluster *fdbtypes.FoundationDBBaremetalCluster) map[string]int {
     req := map[string]int{fdbtypes.FDBLocalityZoneIDKey: 1}
 
     // Multi region cluster (HA)

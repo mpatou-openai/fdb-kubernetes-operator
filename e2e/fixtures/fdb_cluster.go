@@ -40,7 +40,7 @@ import (
 // Depending on how it was instantiated, the cluster may or may not exist, and may or may not
 // be part of an HA configuration.
 type FdbCluster struct {
-	cluster *fdbv1beta2.FoundationDBCluster
+	cluster *fdbv1beta2.FoundationDBBaremetalCluster
 	factory *Factory
 }
 
@@ -62,7 +62,7 @@ func (fdbCluster *FdbCluster) ExecuteCmdOnPod(
 }
 
 func (factory *Factory) createFdbClusterObject(
-	cluster *fdbv1beta2.FoundationDBCluster,
+	cluster *fdbv1beta2.FoundationDBBaremetalCluster,
 ) *FdbCluster {
 	return &FdbCluster{
 		cluster,
@@ -70,7 +70,7 @@ func (factory *Factory) createFdbClusterObject(
 	}
 }
 
-// Name returns the name for the FoundationDBCluster.
+// Name returns the name for the FoundationDBBaremetalCluster.
 func (fdbCluster *FdbCluster) Name() string {
 	return fdbCluster.cluster.Name
 }
@@ -79,14 +79,14 @@ func (fdbCluster *FdbCluster) getClient() client.Client {
 	return fdbCluster.factory.GetControllerRuntimeClient()
 }
 
-// Namespace returns the namespace for the FoundationDBCluster.
+// Namespace returns the namespace for the FoundationDBBaremetalCluster.
 func (fdbCluster *FdbCluster) Namespace() string {
 	return fdbCluster.cluster.Namespace
 }
 
 // WaitUntilExists synchronously waits until the cluster exists.  Usually called after Create().
 func (fdbCluster *FdbCluster) WaitUntilExists() {
-	clusterRequest := fdbv1beta2.FoundationDBCluster{}
+	clusterRequest := fdbv1beta2.FoundationDBBaremetalCluster{}
 	key := client.ObjectKeyFromObject(fdbCluster.cluster)
 
 	gomega.Eventually(func() error {
@@ -227,7 +227,7 @@ func (fdbCluster *FdbCluster) waitForReconciliationToGeneration(
 		)
 	}
 
-	checkIfReconciliationIsDone := func(cluster *fdbv1beta2.FoundationDBCluster) bool {
+	checkIfReconciliationIsDone := func(cluster *fdbv1beta2.FoundationDBBaremetalCluster) bool {
 		if creationTracker != nil {
 			creationTracker.trackProgress(cluster)
 		}
@@ -273,7 +273,7 @@ func (fdbCluster *FdbCluster) waitForReconciliationToGeneration(
 func (fdbCluster *FdbCluster) WaitUntilWithForceReconcile(
 	pollTimeInSeconds int,
 	timeOutInSeconds int,
-	checkMethod func(cluster *fdbv1beta2.FoundationDBCluster) bool,
+	checkMethod func(cluster *fdbv1beta2.FoundationDBBaremetalCluster) bool,
 ) error {
 	// Printout the initial state of the cluster before we're moving forward waiting for the checkMethod to return true.
 	fdbCluster.factory.DumpState(fdbCluster)
@@ -304,7 +304,7 @@ func (fdbCluster *FdbCluster) WaitUntilWithForceReconcile(
 	)
 }
 
-// ForceReconcile will add an annotation with the current timestamp on the FoundationDBCluster resource to make sure
+// ForceReconcile will add an annotation with the current timestamp on the FoundationDBBaremetalCluster resource to make sure
 // the operator reconciliation loop is triggered. This is used to speed up some test cases.
 func (fdbCluster *FdbCluster) ForceReconcile() {
 	log.Printf("ForceReconcile: Status Generations=%s, Metadata Generation=%d",
@@ -332,9 +332,9 @@ func (fdbCluster *FdbCluster) ForceReconcile() {
 	}
 }
 
-// GetCluster returns the FoundationDBCluster of the cluster. This will fetch the latest value from  the Kubernetes API.
-func (fdbCluster *FdbCluster) GetCluster() *fdbv1beta2.FoundationDBCluster {
-	var cluster *fdbv1beta2.FoundationDBCluster
+// GetCluster returns the FoundationDBBaremetalCluster of the cluster. This will fetch the latest value from  the Kubernetes API.
+func (fdbCluster *FdbCluster) GetCluster() *fdbv1beta2.FoundationDBBaremetalCluster {
+	var cluster *fdbv1beta2.FoundationDBBaremetalCluster
 
 	gomega.Eventually(func() error {
 		var err error
@@ -345,7 +345,7 @@ func (fdbCluster *FdbCluster) GetCluster() *fdbv1beta2.FoundationDBCluster {
 
 		if err != nil {
 			log.Println(
-				"error fetching information for FoundationDBCluster",
+				"error fetching information for FoundationDBBaremetalCluster",
 				fdbCluster.Name(),
 				"in",
 				fdbCluster.Namespace(),
@@ -365,11 +365,11 @@ func (fdbCluster *FdbCluster) GetCluster() *fdbv1beta2.FoundationDBCluster {
 // GetCachedCluster returns the current cluster definition stored in the fdbCluster struct. This could be outdated and
 // if you need the most recent version of the definition you should use `GetCluster`. This method is useful if you want
 // to inspect fields that are not changing.
-func (fdbCluster *FdbCluster) GetCachedCluster() *fdbv1beta2.FoundationDBCluster {
+func (fdbCluster *FdbCluster) GetCachedCluster() *fdbv1beta2.FoundationDBBaremetalCluster {
 	return fdbCluster.cluster
 }
 
-// SetDatabaseConfiguration sets the provided DatabaseConfiguration for the FoundationDBCluster.
+// SetDatabaseConfiguration sets the provided DatabaseConfiguration for the FoundationDBBaremetalCluster.
 func (fdbCluster *FdbCluster) SetDatabaseConfiguration(
 	config fdbv1beta2.DatabaseConfiguration,
 	waitForReconcile bool,
@@ -384,13 +384,13 @@ func (fdbCluster *FdbCluster) SetDatabaseConfiguration(
 	return fdbCluster.WaitForReconciliation()
 }
 
-// UpdateClusterStatus updates the FoundationDBCluster status. This method allows to modify the status sub-resource of
-// the FoundationDBCluster resource.
+// UpdateClusterStatus updates the FoundationDBBaremetalCluster status. This method allows to modify the status sub-resource of
+// the FoundationDBBaremetalCluster resource.
 func (fdbCluster *FdbCluster) UpdateClusterStatus() {
 	fdbCluster.UpdateClusterStatusWithStatus(fdbCluster.cluster.Status.DeepCopy())
 }
 
-// UpdateClusterStatusWithStatus ensures that the FoundationDBCluster status will be updated in Kubernetes. This method has a retry mechanism
+// UpdateClusterStatusWithStatus ensures that the FoundationDBBaremetalCluster status will be updated in Kubernetes. This method has a retry mechanism
 // implemented and ensures that the provided (local) Status matches the status in Kubernetes. You must make sure that you call
 // fdbCluster.GetCluster() before updating the status, to make sure you are not overwriting the current state with an outdated state.
 // An example on how to update a field with this method:
@@ -406,9 +406,9 @@ func (fdbCluster *FdbCluster) UpdateClusterStatus() {
 //		// Make sure the operator picks up the work again
 //		fdbCluster.SetSkipReconciliation(false)
 func (fdbCluster *FdbCluster) UpdateClusterStatusWithStatus(
-	desiredStatus *fdbv1beta2.FoundationDBClusterStatus,
+	desiredStatus *fdbv1beta2.FoundationDBBaremetalClusterStatus,
 ) {
-	fetchedCluster := &fdbv1beta2.FoundationDBCluster{}
+	fetchedCluster := &fdbv1beta2.FoundationDBBaremetalCluster{}
 
 	// This is flaky. It sometimes responds with an error saying that the object has been updated.
 	// Try a few times before giving up.
@@ -433,13 +433,13 @@ func (fdbCluster *FdbCluster) UpdateClusterStatusWithStatus(
 	fdbCluster.cluster = fetchedCluster
 }
 
-// UpdateClusterSpec ensures that the FoundationDBCluster will be updated in Kubernetes. This method has a retry mechanism
+// UpdateClusterSpec ensures that the FoundationDBBaremetalCluster will be updated in Kubernetes. This method has a retry mechanism
 // implemented and ensures that the provided (local) Spec matches the Spec in Kubernetes.
 func (fdbCluster *FdbCluster) UpdateClusterSpec() {
 	fdbCluster.UpdateClusterSpecWithSpec(fdbCluster.cluster.Spec.DeepCopy())
 }
 
-// UpdateClusterSpecWithSpec ensures that the FoundationDBCluster will be updated in Kubernetes. This method has a retry mechanism
+// UpdateClusterSpecWithSpec ensures that the FoundationDBBaremetalCluster will be updated in Kubernetes. This method has a retry mechanism
 // implemented and ensures that the provided (local) Spec matches the Spec in Kubernetes. You must make sure that you call
 // fdbCluster.GetCluster() before updating the spec, to make sure you are not overwriting the current state with an outdated state.
 // An example on how to update a field with this method:
@@ -449,9 +449,9 @@ func (fdbCluster *FdbCluster) UpdateClusterSpec() {
 //
 //	fdbCluster.UpdateClusterSpecWithSpec(spec) // Update the spec.
 func (fdbCluster *FdbCluster) UpdateClusterSpecWithSpec(
-	desiredSpec *fdbv1beta2.FoundationDBClusterSpec,
+	desiredSpec *fdbv1beta2.FoundationDBBaremetalClusterSpec,
 ) {
-	fetchedCluster := &fdbv1beta2.FoundationDBCluster{}
+	fetchedCluster := &fdbv1beta2.FoundationDBBaremetalCluster{}
 
 	// This is flaky. It sometimes responds with an error saying that the object has been updated.
 	// Try a few times before giving up.

@@ -30,7 +30,7 @@ is safe to remove the process. If we could track all of the IP addresses a
 process has had independently of the pod lifecycle, we could safely replace
 processes that are stuck in a pending state.
 
-The scope of this design is restricted to managing the FoundationDBCluster
+The scope of this design is restricted to managing the FoundationDBBaremetalCluster
 object, and resources that are downstream of that object. Managing backups,
 restores, or any other top-level resources in the operator is out of scope.
 

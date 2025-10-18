@@ -382,7 +382,7 @@ func DoFaultDomainChecksOnStatus(
 func HasDesiredFaultToleranceFromStatus(
 	log logr.Logger,
 	status *fdbv1beta2.FoundationDBStatus,
-	cluster *fdbv1beta2.FoundationDBCluster,
+	cluster *fdbv1beta2.FoundationDBBaremetalCluster,
 ) bool {
 	if !status.Client.DatabaseStatus.Available {
 		log.Info("Cluster is not available",
@@ -486,7 +486,7 @@ func CanSafelyExcludeProcesses(status *fdbv1beta2.FoundationDBStatus) error {
 }
 
 func canSafelyExcludeOrIncludeProcesses(
-	cluster *fdbv1beta2.FoundationDBCluster,
+	cluster *fdbv1beta2.FoundationDBBaremetalCluster,
 	status *fdbv1beta2.FoundationDBStatus,
 	inclusion bool,
 	minRecoverySeconds float64,
@@ -541,7 +541,7 @@ func recoveryStateAllowsInclusion(status *fdbv1beta2.FoundationDBStatus) bool {
 // CanSafelyExcludeProcessesWithRecoveryState currently performs the DefaultSafetyChecks and makes sure that the last recovery was at least `minRecoverySeconds` seconds ago.
 // In the future this check might be extended to perform more specific checks.
 func CanSafelyExcludeProcessesWithRecoveryState(
-	cluster *fdbv1beta2.FoundationDBCluster,
+	cluster *fdbv1beta2.FoundationDBBaremetalCluster,
 	status *fdbv1beta2.FoundationDBStatus,
 	minRecoverySeconds float64,
 ) error {
@@ -551,7 +551,7 @@ func CanSafelyExcludeProcessesWithRecoveryState(
 // CanSafelyIncludeProcesses currently performs the DefaultSafetyChecks and makes sure that the last recovery was at least `minRecoverySeconds` seconds ago.
 // In the future this check might be extended to perform more specific checks.
 func CanSafelyIncludeProcesses(
-	cluster *fdbv1beta2.FoundationDBCluster,
+	cluster *fdbv1beta2.FoundationDBBaremetalCluster,
 	status *fdbv1beta2.FoundationDBStatus,
 	minRecoverySeconds float64,
 ) error {
@@ -665,7 +665,7 @@ func PrettyPrintBytes(bytes int64) string {
 // ClusterIsConfigured will return true if the cluster is configured based on the machine-readable status of the status of
 // the FoundationDBCLuster resource.
 func ClusterIsConfigured(
-	cluster *fdbv1beta2.FoundationDBCluster,
+	cluster *fdbv1beta2.FoundationDBBaremetalCluster,
 	status *fdbv1beta2.FoundationDBStatus,
 ) bool {
 	// If we saw at least once that the cluster was configured, we assume that the cluster is always configured.

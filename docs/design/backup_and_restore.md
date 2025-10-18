@@ -180,7 +180,7 @@ The retry interval when we hit the concurrency limit for expiration pods will be
 
 ### Coordinating Operations
 
-If an FDB cluster is deployed across multiple Kubernetes clusters, users may want to create a backup resource in every Kubernetes cluster, rather than picking one to serve as a leader. To support this, we can use the locking system that the operator already uses when coordinating operations for the FoundationDBCluster resource. The following actions will require a lock in order to make changes:
+If an FDB cluster is deployed across multiple Kubernetes clusters, users may want to create a backup resource in every Kubernetes cluster, rather than picking one to serve as a leader. To support this, we can use the locking system that the operator already uses when coordinating operations for the FoundationDBBaremetalCluster resource. The following actions will require a lock in order to make changes:
 
 * Toggle backup running
 * Modify backup

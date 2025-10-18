@@ -201,7 +201,7 @@ func (factory *Factory) CreateFdbCluster(
 // CreateFdbClusterFromSpec creates a FDB cluster. This method can be used in combination with the GenerateFDBClusterSpec method.
 // In general this should only be used for special cases that are not covered by changing the ClusterOptions or the ClusterConfig.
 func (factory *Factory) CreateFdbClusterFromSpec(
-	spec *fdbv1beta2.FoundationDBCluster,
+	spec *fdbv1beta2.FoundationDBBaremetalCluster,
 	config *ClusterConfig,
 ) *FdbCluster {
 	startTime := time.Now()
@@ -290,8 +290,8 @@ func (factory *Factory) Shutdown() {
 func (factory *Factory) getClusterStatus(
 	name string,
 	namespace string,
-) (*fdbv1beta2.FoundationDBCluster, error) {
-	clusterRequest := &fdbv1beta2.FoundationDBCluster{}
+) (*fdbv1beta2.FoundationDBBaremetalCluster, error) {
+	clusterRequest := &fdbv1beta2.FoundationDBBaremetalCluster{}
 	err := factory.GetControllerRuntimeClient().
 		Get(context.Background(), client.ObjectKey{
 			Name:      name,
@@ -317,7 +317,7 @@ func (factory *Factory) DoesPodExist(pod corev1.Pod) (bool, error) {
 }
 
 func (factory *Factory) startFDBFromClusterSpec(
-	spec *fdbv1beta2.FoundationDBCluster,
+	spec *fdbv1beta2.FoundationDBBaremetalCluster,
 	config *ClusterConfig,
 ) *FdbCluster {
 

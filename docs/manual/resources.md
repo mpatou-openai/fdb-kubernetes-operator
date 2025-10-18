@@ -63,7 +63,7 @@ The table below provides examples of different resource names for a process grou
 
 The operator sets some built-in fields in the metadata for the resources it creates. The operator sets the following labels:
 
-* `foundationdb.org/fdb-cluster-name`: The name of the FoundationDBCluster object the resource is for.
+* `foundationdb.org/fdb-cluster-name`: The name of the FoundationDBBaremetalCluster object the resource is for.
 * `foundationdb.org/fdb-process-class`: The process class that the associated process is running.
 * `foundationdb.org/fdb-process-group-id`: The ID of the process group that the resource is related to.
 

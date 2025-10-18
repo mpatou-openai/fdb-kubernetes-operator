@@ -69,7 +69,7 @@ var protocolVersionRegex = regexp.MustCompile(`(?m)^protocol (\w+)$`)
 // cliAdminClient provides an implementation of the admin interface using the FDB CLI.
 type cliAdminClient struct {
 	// Cluster is the reference to the cluster model.
-	Cluster *fdbv1beta2.FoundationDBCluster
+	Cluster *fdbv1beta2.FoundationDBBaremetalCluster
 
 	// custom parameters that should be set.
 	knobs []string
@@ -91,7 +91,7 @@ type cliAdminClient struct {
 
 // NewCliAdminClient generates an Admin client for a cluster
 func NewCliAdminClient(
-	cluster *fdbv1beta2.FoundationDBCluster,
+	cluster *fdbv1beta2.FoundationDBBaremetalCluster,
 	_ client.Client,
 	logger logr.Logger,
 ) (fdbadminclient.AdminClient, error) {
@@ -163,7 +163,7 @@ func (command cliCommand) getTimeout() time.Duration {
 
 // getVersion returns the versions defined in the command or if not present returns the running version of the
 // cluster.
-func (command cliCommand) getVersion(cluster *fdbv1beta2.FoundationDBCluster) string {
+func (command cliCommand) getVersion(cluster *fdbv1beta2.FoundationDBBaremetalCluster) string {
 	if command.version != "" {
 		return command.version
 	}

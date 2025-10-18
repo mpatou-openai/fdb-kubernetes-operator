@@ -99,7 +99,7 @@ var _ = Describe("common_test", func() {
 			GinkgoT().Setenv("TMPDIR", tmpDir)
 
 			var err error
-			file, err = createClusterFileForCommandLine(&fdbv1beta2.FoundationDBCluster{
+			file, err = createClusterFileForCommandLine(&fdbv1beta2.FoundationDBBaremetalCluster{
 				ObjectMeta: metav1.ObjectMeta{
 					UID: types.UID(uid),
 				},

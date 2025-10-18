@@ -23,7 +23,7 @@ stringData:
     # Put your key here.
 ---
 apiVersion: apps.foundationdb.org/v1beta2
-kind: FoundationDBCluster
+kind: FoundationDBBaremetalCluster
 metadata:
   name: sample-cluster
 spec:
@@ -118,7 +118,7 @@ Once the cluster is reconciled the TLS conversion can be started by enabling TLS
 
 ```yaml
 apiVersion: apps.foundationdb.org/v1beta2
-kind: FoundationDBCluster
+kind: FoundationDBBaremetalCluster
 metadata:
   name: sample-cluster
 spec:

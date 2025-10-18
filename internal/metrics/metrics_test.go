@@ -27,11 +27,11 @@ import (
 )
 
 var _ = Describe("metrics", func() {
-	var cluster *fdbv1beta2.FoundationDBCluster
+	var cluster *fdbv1beta2.FoundationDBBaremetalCluster
 
 	BeforeEach(func() {
-		cluster = &fdbv1beta2.FoundationDBCluster{
-			Status: fdbv1beta2.FoundationDBClusterStatus{},
+		cluster = &fdbv1beta2.FoundationDBBaremetalCluster{
+			Status: fdbv1beta2.FoundationDBBaremetalClusterStatus{},
 		}
 	})
 

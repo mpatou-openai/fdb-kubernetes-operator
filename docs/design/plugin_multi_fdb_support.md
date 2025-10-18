@@ -49,7 +49,7 @@ An example manifest for the `kubectl fdbq plugin` that bootstraps a multi-region
 
 ```yaml
 apiVersion: apps.foundationdb.org/v1beta1
-kind: FoundationDBCluster
+kind: FoundationDBBaremetalCluster
 metadata:
   labels:
     cluster-group: sample-cluster
@@ -103,7 +103,7 @@ For a `multi-Kubernetes` cluster the configuration could look like this:
 
 ```yaml
 apiVersion: apps.foundationdb.org/v1beta1
-kind: FoundationDBCluster
+kind: FoundationDBBaremetalCluster
 metadata:
   labels:
     cluster-group: sample-cluster

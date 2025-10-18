@@ -23,7 +23,7 @@ To run the operator in your environment, you need to install the operator and th
 For a production setup you should refer to a specific tag.
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/FoundationDB/fdb-kubernetes-operator/main/config/crd/bases/apps.foundationdb.org_foundationdbclusters.yaml
+kubectl apply -f https://raw.githubusercontent.com/FoundationDB/fdb-kubernetes-operator/main/config/crd/bases/apps.foundationdb.org_foundationdbbaremetalclusters.yaml
 kubectl apply -f https://raw.githubusercontent.com/FoundationDB/fdb-kubernetes-operator/main/config/crd/bases/apps.foundationdb.org_foundationdbbackups.yaml
 kubectl apply -f https://raw.githubusercontent.com/FoundationDB/fdb-kubernetes-operator/main/config/crd/bases/apps.foundationdb.org_foundationdbrestores.yaml
 kubectl apply -f https://raw.githubusercontent.com/foundationdb/fdb-kubernetes-operator/main/config/samples/deployment.yaml
@@ -36,7 +36,7 @@ kubectl apply -f https://raw.githubusercontent.com/foundationdb/fdb-kubernetes-o
 ```
 
 You can see logs from the operator by running `kubectl logs -f -l app=fdb-kubernetes-operator-controller-manager --container=manager`.
-To determine whether the reconciliation has completed, you can run `kubectl get foundationdbcluster test-cluster`.
+To determine whether the reconciliation has completed, you can run `kubectl get foundationdbbaremetalcluster test-cluster`.
 This will show the latest generation of the spec and the last reconciled generation of the spec.
 Once reconciliation has completed, these values will be the same.
 

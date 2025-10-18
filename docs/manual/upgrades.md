@@ -2,7 +2,7 @@
 
 ## Overview
 
-The FDB operator supports FDB clusters upgrades by adjusting the `version` setting in the `FoundationDBCluster` spec to the new desired version.
+The FDB operator supports FDB clusters upgrades by adjusting the `version` setting in the `FoundationDBBaremetalCluster` spec to the new desired version.
 It also offers limited support for downgrades, the limitation is that the operator only supports downgrades to an older patch version of the running FDB version.
 Upgrades of FoundationDB running on Kubernetes are challenging and the operator provides a way to handle a lot of the complexity on itself.
 The document will describe the upgrade process in details and some cases the operator cannot handle currently.
@@ -52,7 +52,7 @@ kubectl fdb remove process-group -c cluster pod-1
 ```
 
 If the whole Pod is affected by the networking issue the operator will replace the Pod automatically if automatic replacements are enabled, which is the default.
-In order to replace the Pod the operator will wait for the Process Group to have a [failure condition](https://github.com/FoundationDB/fdb-kubernetes-operator/blob/v1.14.0/api/v1beta2/foundationdbcluster_types.go#L65) for at least the defined [FailureDetectionTimeSeconds](../cluster_spec.md#automaticreplacementoptions), by default those are 7200 seconds (2 hours).
+In order to replace the Pod the operator will wait for the Process Group to have a [failure condition](https://github.com/FoundationDB/fdb-kubernetes-operator/blob/v1.14.0/api/v1beta2/foundationdbbaremetalcluster_types.go#L65) for at least the defined [FailureDetectionTimeSeconds](../cluster_spec.md#automaticreplacementoptions), by default those are 7200 seconds (2 hours).
 
 #### Restart Phase
 
@@ -92,7 +92,7 @@ If an issue cannot be handled by the operator we will outline a way to manually 
 During the staging phase it can happen that a `fdbserver` process gets restarted by an external event like the OOM killer or any issue that results in the `fdbserver` crashing.
 In that case the `fdbmonitor` will restart the `fdbserver` process with the new version and for version incompatible upgrades, that means this process is not able to connect to the cluster.
 The operator will mark this Process Group with the `MissingProcesses` condition, since the process will be missing in the [cluster status json](https://apple.github.io/foundationdb/mr-status.html).
-If the process has this condition longer than the [IgnoreMissingProcessesSeconds](../cluster_spec.md#foundationdbclusterautomationoptions) setting it will be ignored in the [Restart Phase](#restart-phase) to ensure the operator can move forward with the upgrade.
+If the process has this condition longer than the [IgnoreMissingProcessesSeconds](../cluster_spec.md#foundationdbbaremetalclusterautomationoptions) setting it will be ignored in the [Restart Phase](#restart-phase) to ensure the operator can move forward with the upgrade.
 This also means that for a short time the cluster might be running with less resources.
 
 Processes that are restarted too early can be identified with the `MissingProcesses` condition.

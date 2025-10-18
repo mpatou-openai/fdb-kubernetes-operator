@@ -28,10 +28,10 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-// GenerateFDBClusterSpec will generate a *fdbv1beta2.FoundationDBCluster based on the input ClusterConfig.
+// GenerateFDBClusterSpec will generate a *fdbv1beta2.FoundationDBBaremetalCluster based on the input ClusterConfig.
 func (factory *Factory) GenerateFDBClusterSpec(
 	config *ClusterConfig,
-) *fdbv1beta2.FoundationDBCluster {
+) *fdbv1beta2.FoundationDBBaremetalCluster {
 	config.SetDefaults(factory)
 
 	return factory.createFDBClusterSpec(
@@ -43,13 +43,13 @@ func (factory *Factory) GenerateFDBClusterSpec(
 func (factory *Factory) createFDBClusterSpec(
 	config *ClusterConfig,
 	databaseConfiguration fdbv1beta2.DatabaseConfiguration,
-) *fdbv1beta2.FoundationDBCluster {
-	return &fdbv1beta2.FoundationDBCluster{
+) *fdbv1beta2.FoundationDBBaremetalCluster {
+	return &fdbv1beta2.FoundationDBBaremetalCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      config.Name,
 			Namespace: config.Namespace,
 		},
-		Spec: fdbv1beta2.FoundationDBClusterSpec{
+		Spec: fdbv1beta2.FoundationDBBaremetalClusterSpec{
 			Version:               config.GetVersion(),
 			DatabaseConfiguration: databaseConfiguration,
 		},

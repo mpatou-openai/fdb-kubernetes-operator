@@ -102,7 +102,7 @@ func parseMachineReadableStatus(
 }
 
 // getFDBDatabase opens an FDB database.
-func getFDBDatabase(cluster *fdbv1beta2.FoundationDBCluster) (fdb.Database, error) {
+func getFDBDatabase(cluster *fdbv1beta2.FoundationDBBaremetalCluster) (fdb.Database, error) {
 	clusterFile, err := ensureClusterFileIsPresent(
 		path.Join(os.TempDir(), string(cluster.UID)),
 		cluster.Status.ConnectionString,
@@ -164,7 +164,7 @@ func ensureClusterFileIsPresent(clusterFileName string, connectionString string)
 
 // createClusterFileForCommandLine will create a cluster file that can be used by the fdb cli tooling, e.g. fdbcli or
 // fdbbackup. The file should be deleted after use.
-func createClusterFileForCommandLine(cluster *fdbv1beta2.FoundationDBCluster) (*os.File, error) {
+func createClusterFileForCommandLine(cluster *fdbv1beta2.FoundationDBBaremetalCluster) (*os.File, error) {
 	tmpDir := path.Join(os.TempDir(), fmt.Sprintf("%s-cli", cluster.UID))
 	err := os.MkdirAll(tmpDir, 0777)
 	if err != nil {
@@ -233,7 +233,7 @@ type realDatabaseClientProvider struct {
 }
 
 func (p *realDatabaseClientProvider) GetAdminClientWithLogger(
-	cluster *fdbv1beta2.FoundationDBCluster,
+	cluster *fdbv1beta2.FoundationDBBaremetalCluster,
 	kubernetesClient client.Client,
 	logger logr.Logger,
 ) (fdbadminclient.AdminClient, error) {
@@ -242,7 +242,7 @@ func (p *realDatabaseClientProvider) GetAdminClientWithLogger(
 
 // GetLockClient generates a client for working with locks through the database.
 func (p *realDatabaseClientProvider) GetLockClient(
-	cluster *fdbv1beta2.FoundationDBCluster,
+	cluster *fdbv1beta2.FoundationDBBaremetalCluster,
 ) (fdbadminclient.LockClient, error) {
 	return NewRealLockClient(cluster, p.log)
 }
@@ -250,7 +250,7 @@ func (p *realDatabaseClientProvider) GetLockClient(
 // GetLockClientWithLogger generates a client for working with locks through the database.
 // The provided logger will be used as logger for the LockClient.
 func (p *realDatabaseClientProvider) GetLockClientWithLogger(
-	cluster *fdbv1beta2.FoundationDBCluster,
+	cluster *fdbv1beta2.FoundationDBBaremetalCluster,
 	logger logr.Logger,
 ) (fdbadminclient.LockClient, error) {
 	return NewRealLockClient(cluster, logger.WithName("fdbclient"))
@@ -259,7 +259,7 @@ func (p *realDatabaseClientProvider) GetLockClientWithLogger(
 // GetAdminClient generates a client for performing administrative actions
 // against the database.
 func (p *realDatabaseClientProvider) GetAdminClient(
-	cluster *fdbv1beta2.FoundationDBCluster,
+	cluster *fdbv1beta2.FoundationDBBaremetalCluster,
 	kubernetesClient client.Client,
 ) (fdbadminclient.AdminClient, error) {
 	return NewCliAdminClient(cluster, kubernetesClient, p.log)

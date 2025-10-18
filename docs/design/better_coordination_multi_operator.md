@@ -15,7 +15,7 @@ The `LockClient` is also used to get a lease that allows the operator instance t
 
 The difference between the upgrades and the other operations that should be coordinated is that the upgrades have a "global" source of truth.
 During the upgrades the each operator instance can check that all processes in the cluster are ready for being upgraded.
-In contrast the other operations are lacking such a "global" source of truth and only have their own local state based on th `FoundationDBCluster` resource.
+In contrast the other operations are lacking such a "global" source of truth and only have their own local state based on th `FoundationDBBaremetalCluster` resource.
 Adding an optimistic coordination mechanism doesn't guarantee that the operations are executed once but it will increase the probability that the operator instance have enough time to coordinate.
 Most operations have some requirements before they can be executed, e.g. in case of a knob rollout the `ConfigMap` must be updated and synced to all affected Pods or in the case of a replacement a new pod and the according resources must be created.
 The waiting time until the prerequisites are satisfied should be enough time to allow the individual operator instances to update the pending list for the coordination.
@@ -23,7 +23,7 @@ This is still an imperfect solution which will not guarantee that the operator i
 In order to increase the probability that the different operator instances have time to update the pending list, we could add a dedicated wait window until an operation will be executed.
 Adding a wait window will have the side effect that the rollout of a change might take longer than required.
 
-One assumption for the coordination is, that all operations that could use coordination will update the `FoundationDBCluster` resources in a short time window, e.g. by the same deploy pipeline.
+One assumption for the coordination is, that all operations that could use coordination will update the `FoundationDBBaremetalCluster` resources in a short time window, e.g. by the same deploy pipeline.
 
 
 ## General Design Goals
@@ -65,12 +65,12 @@ The following methods will be added:
 
 The following sub-reconciler will be added or modified:
 
-- `operatorCoordination`: Will add process groups that are marked for removal to the key range and removes them from the key range if they are not being present anymore in the `FoundationDBCluster` status and the process group prefix matches. This sub-reconciler will also remove process groups from the `readyForExclusion`, `readyForInclusion` and `readyForRestart` (and the same for pending).
+- `operatorCoordination`: Will add process groups that are marked for removal to the key range and removes them from the key range if they are not being present anymore in the `FoundationDBBaremetalCluster` status and the process group prefix matches. This sub-reconciler will also remove process groups from the `readyForExclusion`, `readyForInclusion` and `readyForRestart` (and the same for pending).
 - `excludeProcesses`: Will add process groups that are pending for exclusions and add process groups that are ready for exclusion.
 - `changeCoordinators`: Will read the `pendingForRemoval` set and will not take any process group from this set as a candidate for the new coordinators.
 - `removeProcessGroups`: Will add process groups that can be included to `readyForInclusion`.
 
-We will add a new setting under the `FoundationDBClusterAutomationOptions` with the name `synronizationMode`.
+We will add a new setting under the `FoundationDBBaremetalClusterAutomationOptions` with the name `synronizationMode`.
 The default will be `local`, which will represent the current state and the new mechanism can be enabled by setting the value to `global`.
 Those changes will add some additional load to the cluster, but the additional load should be fairly limited compared to the customer load on those clusters and the request pattern will be mostly reading the data.
 
@@ -92,7 +92,7 @@ Example: The resulting key-value mappings for the process group id `kube-cluster
 ```
 
 Each operator instance will only write or delete the "local" process groups.
-"Local" means in this context that the operator instance only writes into the sub-path that has the `processGroupIDPrefix` which is defined in the `FoundationDBCluster` resource.
+"Local" means in this context that the operator instance only writes into the sub-path that has the `processGroupIDPrefix` which is defined in the `FoundationDBBaremetalCluster` resource.
 The operator instance will read the data from all process groups to.
 The reading and writing will be handled in a transaction to ensure either all keys are updated or none.
 
@@ -123,7 +123,7 @@ In the initial implementation we are not adding any dedicated wait steps to incr
 The assumption here is that all operations have some prerequisites before they can be executed and in most cases waiting for the prerequisites should give the operator instances enough time to add the process groups to the pending list(s).
 
 ```go
-func (e excludeProcesses) reconcile(ctx context.Context, r *FoundationDBClusterReconciler, cluster *fdbv1beta2.FoundationDBCluster, status *fdbv1beta2.FoundationDBStatus, logger logr.Logger) *requeue {
+func (e excludeProcesses) reconcile(ctx context.Context, r *FoundationDBBaremetalClusterReconciler, cluster *fdbv1beta2.FoundationDBBaremetalCluster, status *fdbv1beta2.FoundationDBStatus, logger logr.Logger) *requeue {
 	// Check which processes can be excluded and if it's safe to exclude processes.
 	// ...
 	// In case that there are processes from different transaction process classes, we expect that the operator is allowed
@@ -167,8 +167,8 @@ func (e excludeProcesses) reconcile(ctx context.Context, r *FoundationDBClusterR
 
 ### Operator Coordination Sub-Reconciler
 
-This new sub-reconciler will run after the first `updateStatus` sub-reconciler and will be responsible for adding and removing process groups from the state in the FoundationDBCluster.
-For this the operator will iterate over all process groups from the `FoundationDBCluster` resource.
+This new sub-reconciler will run after the first `updateStatus` sub-reconciler and will be responsible for adding and removing process groups from the state in the FoundationDBBaremetalCluster.
+For this the operator will iterate over all process groups from the `FoundationDBBaremetalCluster` resource.
 Since this sub-reconciler runs after the first `updateStatus` sub-reconciler it should have the latest information.
 
 When a process group is marked for removal and not excluded the operator will add this process group to the set of `pendingForRemoval`, `pendingForExclusion` and `pendingForInclusion`.
@@ -183,7 +183,7 @@ The goal of this new sub-reconciler is to manage the state in FoundationDB for t
 Adding a new sub-reconciler will be easier to maintain instead of adding this logic to the `updateStatus` sub-reconciler.
 
 ```go
-func (reconciler operatorCoordination) reconcile(ctx context.Context, r *FoundationDBClusterReconciler, cluster *fdbv1beta2.FoundationDBCluster, _ *fdbv1beta2.FoundationDBStatus, logger logr.Logger) *requeue {
+func (reconciler operatorCoordination) reconcile(ctx context.Context, r *FoundationDBBaremetalClusterReconciler, cluster *fdbv1beta2.FoundationDBBaremetalCluster, _ *fdbv1beta2.FoundationDBStatus, logger logr.Logger) *requeue {
 	// If the synchronization mode is local (default) skip all work
 	if cluster.GetSynronizationMode() == string(fdbv1beta2.SynronizationModeLocal) {
 		return nil

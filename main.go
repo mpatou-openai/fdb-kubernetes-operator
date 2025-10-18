@@ -54,7 +54,7 @@ func main() {
 		scheme,
 		operatorOpts,
 		logOpts,
-		controllers.NewFoundationDBClusterReconciler(),
+		controllers.NewFoundationDBBaremetalClusterReconciler(),
 		ctrl.Log,
 	)
 

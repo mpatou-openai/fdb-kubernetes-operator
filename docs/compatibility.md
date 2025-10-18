@@ -67,5 +67,5 @@ More information can be found in the [Kubernetes docs](https://kubernetes.io/doc
 The FDB operator currently doesn't implement a conversion webhook.
 
 Per default all new resources will be stored in the new CRD versions (or if you change an existing one).
-You can query a specific version with e.g. `kubectl get foundationdbclusters.v1beta1.apps.foundationdb.org`, both version should show the same content.
+You can query a specific version with e.g. `kubectl get foundationdbbaremetalclusters.v1beta1.apps.foundationdb.org`, both version should show the same content.
 The FDB operator will use internally only the new version.

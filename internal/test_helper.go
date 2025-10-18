@@ -30,14 +30,14 @@ import (
 	ctrlClient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// CreateDefaultCluster creates a default FoundationDBCluster for testing
-func CreateDefaultCluster() *fdbv1beta2.FoundationDBCluster {
-	return &fdbv1beta2.FoundationDBCluster{
+// CreateDefaultCluster creates a default FoundationDBBaremetalCluster for testing
+func CreateDefaultCluster() *fdbv1beta2.FoundationDBBaremetalCluster {
+	return &fdbv1beta2.FoundationDBBaremetalCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "operator-test-1",
 			Namespace: "my-ns",
 		},
-		Status: fdbv1beta2.FoundationDBClusterStatus{
+		Status: fdbv1beta2.FoundationDBBaremetalClusterStatus{
 			RunningVersion: fdbv1beta2.Versions.Default.String(),
 		},
 	}
@@ -67,7 +67,7 @@ func GenerateRandomString(n int) string {
 
 // SetupClusterForTest will generate all required resources like Pods for test cases.
 func SetupClusterForTest(
-	cluster *fdbv1beta2.FoundationDBCluster,
+	cluster *fdbv1beta2.FoundationDBBaremetalCluster,
 	k8sClient ctrlClient.Client,
 ) error {
 

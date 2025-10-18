@@ -32,7 +32,7 @@ import (
 )
 
 var _ = Describe("configmap_helper", func() {
-	var cluster *fdbv1beta2.FoundationDBCluster
+	var cluster *fdbv1beta2.FoundationDBBaremetalCluster
 	var fakeConnectionString string
 	var err error
 

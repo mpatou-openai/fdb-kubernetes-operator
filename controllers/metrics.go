@@ -30,10 +30,10 @@ import (
 )
 
 type fdbClusterCollector struct {
-	reconciler *FoundationDBClusterReconciler
+	reconciler *FoundationDBBaremetalClusterReconciler
 }
 
-func newFDBClusterCollector(reconciler *FoundationDBClusterReconciler) *fdbClusterCollector {
+func newFDBClusterCollector(reconciler *FoundationDBBaremetalClusterReconciler) *fdbClusterCollector {
 	return &fdbClusterCollector{reconciler: reconciler}
 }
 
@@ -45,7 +45,7 @@ func (c *fdbClusterCollector) Describe(ch chan<- *prometheus.Desc) {
 
 // Collect implements the prometheus.Collector interface
 func (c *fdbClusterCollector) Collect(ch chan<- prometheus.Metric) {
-	clusters := &fdbv1beta2.FoundationDBClusterList{}
+	clusters := &fdbv1beta2.FoundationDBBaremetalClusterList{}
 	err := c.reconciler.List(context.Background(), clusters)
 	if err != nil {
 		return
@@ -56,7 +56,7 @@ func (c *fdbClusterCollector) Collect(ch chan<- prometheus.Metric) {
 }
 
 // InitCustomMetrics initializes the metrics collectors for the operator.
-func InitCustomMetrics(reconciler *FoundationDBClusterReconciler) {
+func InitCustomMetrics(reconciler *FoundationDBBaremetalClusterReconciler) {
 	metrics.Registry.MustRegister(
 		newFDBClusterCollector(reconciler),
 		internalMetrics.CoordinatorChangesCounter,

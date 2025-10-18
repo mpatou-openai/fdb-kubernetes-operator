@@ -138,7 +138,7 @@ func (tracker *fdbClusterCreationTracker) nextStep() {
 // checkStep will check if the current step is full filled and if the state machine should move to the next step.
 func (tracker *fdbClusterCreationTracker) checkStep(
 	step creationStep,
-	cluster *fdbv1beta2.FoundationDBCluster,
+	cluster *fdbv1beta2.FoundationDBBaremetalCluster,
 ) {
 	switch step {
 	case initialCreationStep:
@@ -165,7 +165,7 @@ func (tracker *fdbClusterCreationTracker) checkStep(
 }
 
 // trackProgress will check the current step until the state machine cannot make progress.
-func (tracker *fdbClusterCreationTracker) trackProgress(cluster *fdbv1beta2.FoundationDBCluster) {
+func (tracker *fdbClusterCreationTracker) trackProgress(cluster *fdbv1beta2.FoundationDBBaremetalCluster) {
 	curStep := -1
 
 	// Check as many steps as possible.

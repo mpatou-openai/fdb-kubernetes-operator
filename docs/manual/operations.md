@@ -2,7 +2,7 @@
 
 ## Common localities
 
-The operator sets per default a predefined set of [localities](https://apple.github.io/foundationdb/configuration.html#fdbserver-section) based on the FoundationDBCluster configuration.
+The operator sets per default a predefined set of [localities](https://apple.github.io/foundationdb/configuration.html#fdbserver-section) based on the FoundationDBBaremetalCluster configuration.
 The following localities will be set by the operator:
 
 - `--locality_instance_id`: This will get the value from `FDB_INSTANCE_ID` and will represent the process group ID, e.g. `storage-1`.
@@ -26,7 +26,7 @@ As an alternative, you can replace a pod by explicitly placing it in the `proces
 
 ```yaml
 apiVersion: apps.foundationdb.org/v1beta2
-kind: FoundationDBCluster
+kind: FoundationDBBaremetalCluster
 metadata:
   name: sample-cluster
 spec:
@@ -47,7 +47,7 @@ To add a knob, you can change the `customParameters` in the cluster spec:
 
 ```yaml
 apiVersion: apps.foundationdb.org/v1beta2
-kind: FoundationDBCluster
+kind: FoundationDBBaremetalCluster
 metadata:
   name: sample-cluster
 spec:
@@ -76,7 +76,7 @@ To upgrade a cluster, you can change the version in the cluster spec:
 
 ```yaml
 apiVersion: apps.foundationdb.org/v1beta2
-kind: FoundationDBCluster
+kind: FoundationDBBaremetalCluster
 metadata:
   name: sample-cluster
 spec:
@@ -90,7 +90,7 @@ For version upgrades from 7.1+ to another major or minor versions the client com
 
 ```yaml
 apiVersion: apps.foundationdb.org/v1beta2
-kind: FoundationDBCluster
+kind: FoundationDBBaremetalCluster
 metadata:
   name: sample-cluster
 spec:
@@ -127,8 +127,8 @@ _NOTE_: This will double the size of the cluster for some time, as this performs
 The operator supports the `--label-selector` flag to select only a subset of clusters to manage.
 The label selector can be useful for sharding multiple operators in addition to add more concurrent reconcile loops with the `--max-concurrent-reconciles` flag.
 A human operator can operate multiple FDB operator in the same namespace with that approach or multiple global FDB operators.
-When using a label selector you must ensure that your FDB custom resources like the `FoundationDBCluster` has the required label.
-In addition to that you must ensure that you add the required labels in the `resourceLabels` of the `labels` section in the `FoundationDBCluster` otherwise the operator will ignore events from the created resources.
+When using a label selector you must ensure that your FDB custom resources like the `FoundationDBBaremetalCluster` has the required label.
+In addition to that you must ensure that you add the required labels in the `resourceLabels` of the `labels` section in the `FoundationDBBaremetalCluster` otherwise the operator will ignore events from the created resources.
 For more information how to add additional labels to the resources managed by the operator refer to the [Resource Labeling](customization.md#resource-labeling) section.
 
 ## Maintenance
@@ -232,8 +232,8 @@ This section will describe the procedure for case 2.
 **NOTE** The assumption here is that at least one coordinator is still available with its coordinator state.
 **NOTE** This action can cause data loss. Perform those actions with care.
 
-- Set all the `FoundationDBCluster` resources for this FDB cluster to `spec.Skip = true` to make sure the operator is not changing the manual changed state. 
-- Fetch the last connection string from the `FoundationDBCluster` status, e.g. `kubectl get fdb ${cluster} -o jsonpath='{ .status.connectionString }'`. 
+- Set all the `FoundationDBBaremetalCluster` resources for this FDB cluster to `spec.Skip = true` to make sure the operator is not changing the manual changed state. 
+- Fetch the last connection string from the `FoundationDBBaremetalCluster` status, e.g. `kubectl get fdb ${cluster} -o jsonpath='{ .status.connectionString }'`. 
 - Copy the coordinator state from one of the running coordinators to your local machine:
 
 ```bash
@@ -264,7 +264,7 @@ If the cluster is a multi-region cluster, perform this step for all running regi
 
 - Now you can exec into a container and use `fdbcli` to connect to the cluster.
 - If you use a multi-region cluster you have to issue `force_recovery_with_data_loss`.
-- Update the `FoundationDBCluster` `seedConnectionString` under `spec.seedConnectionString` with the new connection string.
+- Update the `FoundationDBBaremetalCluster` `seedConnectionString` under `spec.seedConnectionString` with the new connection string.
 - Now you can set `spec.Skip = false` to let the operator take over again.
 - Depending on the state of the multi-region cluster, you probably want to change the desired database configuration to drop ha.
 
