@@ -47,6 +47,10 @@ type SimulationOptions struct {
 type FoundationDBBaremetalClusterReconciler struct {
 	GetTimeout  time.Duration
 	PostTimeout time.Duration
+	// SaltMasterAddress defines the salt master host:port for security updates.
+	SaltMasterAddress string
+	// SecurityUpdateConfigPath defines the cloud config path for security updates.
+	SecurityUpdateConfigPath string
 
 	client.Client
 	Scheme            *runtime.Scheme
@@ -90,7 +94,13 @@ func (r *FoundationDBBaremetalClusterReconciler) Reconcile(ctx context.Context, 
 			time.Since(startTime).Seconds(),
 		)
 	}()
-	return ctrl.Result{}, nil
+
+	result, err := r.reconcileSecurityUpdates(ctx, cluster, clusterLog)
+	if err != nil {
+		return result, err
+	}
+
+	return result, nil
 }
 
 // SetupWithManager configures the reconciler with the controller-runtime manager.

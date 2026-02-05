@@ -83,6 +83,8 @@ type Options struct {
 	// the change.
 	GlobalSynchronizationWaitDuration time.Duration
 	MinimumRequiredUptimeCCBounce     time.Duration
+	SaltMasterAddress                 string
+	SecurityUpdateConfigPath          string
 }
 
 // BindFlags will parse the given flagset for the operator option flags
@@ -250,6 +252,18 @@ func (o *Options) BindFlags(fs *flag.FlagSet) {
 		os.Getenv("WATCH_NAMESPACE"),
 		"Defines which namespace the operator should watch.",
 	)
+	fs.StringVar(
+		&o.SaltMasterAddress,
+		"salt-master-ip",
+		"",
+		"Defines the salt master IP or host:port for security updates.",
+	)
+	fs.StringVar(
+		&o.SecurityUpdateConfigPath,
+		"security-update-config-path",
+		"",
+		"Defines the cloud config path for security update reconciliation.",
+	)
 }
 
 // StartManager will start the FoundationDB operator manager.
@@ -332,6 +346,8 @@ func StartManager(
 		clusterReconciler.Log = logr.WithName("controllers").WithName("FoundationDBBaremetalCluster")
 		clusterReconciler.Scheme = mgr.GetScheme()
 		clusterReconciler.Namespace = operatorOpts.WatchNamespace
+		clusterReconciler.SaltMasterAddress = operatorOpts.SaltMasterAddress
+		clusterReconciler.SecurityUpdateConfigPath = operatorOpts.SecurityUpdateConfigPath
 
 		if err := clusterReconciler.SetupWithManager(mgr, operatorOpts.MaxConcurrentReconciles); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "FoundationDBBaremetalCluster")
